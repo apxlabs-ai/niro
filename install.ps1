@@ -18,15 +18,45 @@ $InstallDir = if ($env:NIRO_INSTALL_DIR) {
     Join-Path $env:LOCALAPPDATA 'Programs\niro'
 }
 
+function Write-Warn($msg) {
+    Write-Host ""
+    Write-Host "Warning: " -ForegroundColor Yellow -NoNewline
+    Write-Host $msg
+}
+
+# OSC 8 hyperlinks render URLs as clickable in modern terminals
+# (Windows Terminal, VSCode, recent ConEmu). Older conhost drops
+# the escape silently. Skip when output isn't a real console host
+# (transcript, redirection) or NO_COLOR is set.
+$script:SupportsLinks = $Host.UI.SupportsVirtualTerminal -and -not $env:NO_COLOR
+function Url-Link($url) {
+    if ($script:SupportsLinks) {
+        $esc = [char]27
+        "$esc]8;;$url$esc\$url$esc]8;;$esc\"
+    } else {
+        $url
+    }
+}
+
 $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
     'AMD64' { 'amd64' }
     'ARM64' { 'arm64' }
-    default { throw "Unsupported architecture: $($env:PROCESSOR_ARCHITECTURE)" }
+    default { throw "unsupported architecture: $($env:PROCESSOR_ARCHITECTURE)" }
 }
 
 $version = if ($env:NIRO_VERSION) { $env:NIRO_VERSION } else { 'latest' }
 $archive = "niro_windows_${arch}.zip"
 $baseUrl = if ($version -eq 'latest') {
+    # Resolve "latest" to the concrete tag so progress and success
+    # lines show what the user actually got. /releases/latest 302-
+    # redirects to /releases/tag/<vX.Y.Z>; follow it and lift the tag
+    # off the final URL. Best-effort: on failure keep "latest" and
+    # let the download go through the same redirect.
+    try {
+        $resp = Invoke-WebRequest -Uri "https://github.com/$Repo/releases/latest" -UseBasicParsing
+        $resolved = $resp.BaseResponse.RequestMessage.RequestUri.AbsoluteUri
+        if ($resolved -match '/releases/tag/([^/]+)$') { $version = $matches[1] }
+    } catch { }
     "https://github.com/$Repo/releases/latest/download"
 } else {
     "https://github.com/$Repo/releases/download/$version"
@@ -34,7 +64,7 @@ $baseUrl = if ($version -eq 'latest') {
 
 $tmp = New-Item -ItemType Directory -Path (Join-Path $env:TEMP "niro-install-$(Get-Random)")
 try {
-    Write-Host "Downloading $archive"
+    Write-Host "Downloading niro $version (windows/$arch)"
     Invoke-WebRequest -Uri "$baseUrl/$archive" `
                       -OutFile (Join-Path $tmp $archive) `
                       -UseBasicParsing
@@ -48,30 +78,40 @@ try {
     $expected = (Get-Content $checksumsPath |
         Where-Object { $_ -match "\s$([regex]::Escape($archive))\s*$" }) `
         -split '\s+' | Select-Object -First 1
-    if (-not $expected) { throw "Archive $archive not found in checksums.txt" }
+    if (-not $expected) { throw "archive $archive not found in checksums.txt" }
 
     $actual = (Get-FileHash -Algorithm SHA256 -Path (Join-Path $tmp $archive)).Hash.ToLower()
     if ($actual -ne $expected.ToLower()) {
-        throw "Checksum mismatch: expected $expected, got $actual"
+        throw "checksum mismatch: expected $expected, got $actual"
     }
 
-    Write-Host "Extracting"
     Expand-Archive -Path (Join-Path $tmp $archive) -DestinationPath $tmp -Force
 
+    Write-Host "Installing to $InstallDir\$BinName"
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
     Move-Item -Force `
         -Path (Join-Path $tmp $BinName) `
         -Destination (Join-Path $InstallDir $BinName)
 
     Write-Host ""
-    Write-Host "Installed niro ($version) to $InstallDir\$BinName"
+    Write-Host "niro $version installed. Run ``niro init`` to get started."
 
     $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
     if ($userPath -notlike "*$InstallDir*") {
         [Environment]::SetEnvironmentVariable('Path', "$userPath;$InstallDir", 'User')
-        Write-Host ""
-        Write-Host "Added $InstallDir to your user PATH."
-        Write-Host "Open a new terminal for the change to take effect."
+        Write-Warn "$InstallDir added to your user PATH. Open a new terminal for the change to take effect."
+    }
+
+    # niro spawns pentests inside containers, so it needs Docker,
+    # Podman, or nerdctl on PATH. Non-blocking — install has already
+    # succeeded. Mirrors the same surface check in install.sh.
+    $hasRuntime = (Get-Command docker -ErrorAction SilentlyContinue) `
+        -or (Get-Command podman -ErrorAction SilentlyContinue) `
+        -or (Get-Command nerdctl -ErrorAction SilentlyContinue)
+    if (-not $hasRuntime) {
+        Write-Warn "no container runtime found. niro needs Docker, Podman, or nerdctl to run pentests."
+        Write-Host "    Docker:  $(Url-Link 'https://docker.com')"
+        Write-Host "    Podman:  $(Url-Link 'https://podman.io')"
     }
 } finally {
     Remove-Item -Recurse -Force -Path $tmp -ErrorAction SilentlyContinue
