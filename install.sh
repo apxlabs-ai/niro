@@ -89,3 +89,15 @@ case ":${PATH}:" in
     printf "  export PATH=\"%s:\$PATH\"\n" "$INSTALL_DIR"
     ;;
 esac
+
+# Heads-up: niro spawns pentests inside containers, so it needs Docker,
+# Podman, or nerdctl on PATH. Non-blocking — install has already
+# succeeded — but flag the gap so the user sees the same canonical
+# message that `niro init` prints as a "Heads up:" line and that
+# `start_pentest` returns inline to the coding agent when called
+# without a runtime available. One string across all four surfaces.
+if ! command -v docker >/dev/null 2>&1 \
+  && ! command -v podman >/dev/null 2>&1 \
+  && ! command -v nerdctl >/dev/null 2>&1; then
+  printf "\nHeads up: niro needs Docker (or Podman / nerdctl) installed locally to run pentests. Install Docker from https://docker.com or Podman from https://podman.io.\n"
+fi
