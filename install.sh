@@ -6,15 +6,37 @@
 #
 # Environment variables:
 #   NIRO_VERSION       Pin to a specific tag (e.g. v0.1.0). Defaults to latest.
-#   NIRO_INSTALL_DIR   Override install directory. Defaults to ~/.local/bin.
+#   NIRO_INSTALL_DIR   Override install directory. Defaults to the first
+#                      writable PATH-resident directory found among:
+#                      /opt/homebrew/bin (Apple Silicon Homebrew),
+#                      /usr/local/bin (Intel Homebrew / common system bin).
+#                      Falls back to ~/.local/bin if none qualify.
 
 set -eu
 
 REPO="apxlabs-ai/niro"
 BIN_NAME="niro"
-INSTALL_DIR="${NIRO_INSTALL_DIR:-${HOME}/.local/bin}"
 
 die() { printf "niro install: %s\n" "$*" >&2; exit 1; }
+
+# Pick an install directory that's already on PATH and user-writable so the
+# user doesn't have to edit their shell rc. Try in priority order; fall back
+# to ~/.local/bin (universal, but not on macOS's default PATH).
+pick_install_dir() {
+  if [ -n "${NIRO_INSTALL_DIR:-}" ]; then
+    printf "%s" "$NIRO_INSTALL_DIR"
+    return
+  fi
+  for d in /opt/homebrew/bin /usr/local/bin; do
+    if [ -d "$d" ] && [ -w "$d" ] && printf ":%s:" "$PATH" | grep -q ":$d:"; then
+      printf "%s" "$d"
+      return
+    fi
+  done
+  printf "%s" "${HOME}/.local/bin"
+}
+
+INSTALL_DIR=$(pick_install_dir)
 
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 case "$OS" in
