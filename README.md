@@ -24,10 +24,9 @@ irm https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.ps1 | iex
 
 ## License
 
-Niro is source-available under the
-[Functional Source License (FSL-1.1-Apache-2.0)](LICENSE.md): use, modify,
-and run it freely for any purpose other than building a competing security
-product. Each release converts to Apache 2.0 two years after publication.
+Niro binary releases are distributed under the
+[Apache License 2.0](LICENSE). Install, run, redistribute, and
+build on niro freely. See [NOTICE](NOTICE) for attribution.
 
-*Source release is staged. This repository currently distributes binary
-releases; the source will be published here under the same license.*
+*This repository currently distributes binary releases only.
+Source remains private at this stage.*
