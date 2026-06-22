@@ -88,6 +88,10 @@ right before a push.
 etc.) so your whole team inherits the setup on the next pull — no one else
 needs to run `niro init`.
 
+> [!TIP]
+> Want to evaluate Niro on a whole application and have your agent open fix
+> PRs? See [Full Pentest to Fix PRs](docs/full-pentest-to-fix-prs.md).
+
 ## What you control
 
 - **Pentest engine** runs in a local sandbox with default-deny egress. The
