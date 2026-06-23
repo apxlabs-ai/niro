@@ -28,6 +28,19 @@ code, before CI finishes. No Jira ticket. No triage queue.
 
 You review a clean PR.
 
+## Pentesting Without the Setup Tax
+
+Most pentests stall before testing starts. The app needs realistic users,
+tenants, resources, webhooks, integrations, feature flags, and product state
+before meaningful bugs are reachable.
+
+Niro turns that setup work into an agent loop. Your coding agent prepares the
+context, Niro reports what is still missing, and the agent fills the gaps and
+re-runs. The developer stays in review mode instead of manually building a
+pentest harness.
+
+See [how the setup loop works](docs/pentesting-without-the-setup-tax.md).
+
 ## Commitments
 
 - Findings in under 8 minutes (P80)
