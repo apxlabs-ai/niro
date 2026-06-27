@@ -1,127 +1,105 @@
+<p align="center">
+  <img src="assets/niro-logo.png" alt="Niro" width="420">
+</p>
+
 # Niro
 
-> Push a PR. Niro hacks it. Your agent patches it.
->
-> Security that keeps pace with AI-speed shipping — found and fixed before you merge.
+> Security that keeps up with your developers.
 
-A PR adds a saved-search feature to your app. Niro reports 4 cross-tenant
-data leaks in under 6 minutes for $2.84 in model spend. Your coding agent
-writes a regression test for each, patches the code, and re-runs Niro to
-verify the fix. The PR goes green.
+Niro pentests your running application and opens review-ready fix PRs with
+security regression tests, so security fixes land as normal pull requests.
 
-That's the loop.
+Today, a pentest starts with a handoff: prepare a runtime, define scope, gather
+credentials and fixtures, wait for findings, triage them, reproduce them, write
+tests, and make the fix. By the time it becomes merged code, weeks or months
+can pass and several people have touched the work.
 
-## What a run looks like
+Meanwhile, the codebase has already moved on. AI coding tools make that gap
+wider: teams are shipping more code than security can review.
 
-1. Push a PR. Your coding agent calls Niro.
-2. Niro pentests your running app — scoped to what the PR changed — and
-   returns each finding with the exact HTTP request that proved it.
-3. Your agent writes a failing regression test, patches the code, and asks
-   Niro to re-verify.
-4. Niro posts a green check on the PR. Merge.
+## Why Now
 
-## Why Niro?
+AI has made code faster to ship and harder to trust.
 
-Your AI agent ships code in minutes. Security testing takes days — if it
-happens at all. Niro closes that gap: testing runs in the same loop as the
-code, before CI finishes. No Jira ticket. No triage queue.
+| Signal | What it means |
+| --- | --- |
+| 85% say AI has shifted the bottleneck from writing code to reviewing and validating it [[1]](#references) | Speed is no longer the hard part. Trust is. |
+| 90% of security leaders report concern about AI-generated software risk [[2]](#references) | AI-written code is now a security governance problem, not just a developer productivity story. |
 
-You review a clean PR.
+## Why Niro
 
-## Pentesting Without the Setup Tax
+Niro collapses app setup, pentesting, and fixing into one repo-native loop.
+Instead of handoffs across several people, Niro brings up the app, tests it,
+and opens PRs that fix security issues with security regression tests. Work
+that can take weeks or months and touch several people can start landing in
+hours.
 
-Most pentests stall before testing starts. The app needs realistic users,
-tenants, resources, webhooks, integrations, feature flags, and product state
-before meaningful bugs are reachable.
+## What Niro Does
 
-Niro turns that setup work into an agent loop. Your coding agent prepares the
-context, Niro reports what is still missing, and the agent fills the gaps and
-re-runs. The developer stays in review mode instead of manually building a
-pentest harness.
+- **Builds the harness:** creates the scripts and config needed to start the
+  app, seed credentials and data fixtures, and make the target testable across
+  languages, frameworks, and databases.
+- **Probes HTTP attack surfaces:** exercises APIs, web flows, MCP servers, and
+  other HTTP endpoints against OWASP Top 10-style risks inside your scope.
+- **Adapts when others stop:** when testing hits missing users, tenants, data,
+  credentials, routes, or feature state, Niro updates the harness, builds the
+  state it needs, and avoids silent coverage gaps.
+- **Turns confirmed issues into focused PRs:** groups related issues by root
+  cause, adds security regression tests, patches code, and opens review-ready
+  PRs.
+- **Runs where your code runs:** locally or in CI, using your environment and
+  your credentials.
 
-See [how the setup loop works](docs/pentesting-without-the-setup-tax.md).
+## Trust And Control
 
-## Commitments
-
-- Findings in under 8 minutes (P80)
-- Under $3 in model spend per run (P80)
-
-Both are commitments, not averages — they're the floor the product is
-engineered around.
-
-## Before you install
-
-Niro orchestrates tools you already use — it doesn't bundle them. You'll
-need:
-
-- **Container runtime** — one of:
-  - [Docker](https://docs.docker.com/get-started/get-docker/)
-  - [Podman](https://podman.io/docs/installation)
-- **CLIs:**
-  - [Git](https://git-scm.com/downloads)
-  - your code host's CLI — one of:
-    - [GitHub](https://cli.github.com/)
-    - [Azure DevOps](https://learn.microsoft.com/cli/azure/install-azure-cli)
-- **Coding agent** (installed locally) — one of:
-  - [Claude Code](https://code.claude.com/docs/en/overview)
-  - [GitHub Copilot](https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli)
-  - [OpenAI Codex](https://developers.openai.com/codex/cli)
-
-Need GitLab, Cursor, or something else? [Open an
-issue](https://github.com/apxlabs-ai/niro/issues) — we prioritize by demand.
-Runs on macOS, Linux, and Windows.
-
-## Install
-
-**macOS, Linux:**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
-```
-
-**Windows (PowerShell):**
-
-```powershell
-irm https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.ps1 | iex
-```
+- **Data privacy:** app traffic, credentials, and test state stay in your
+  environment; AI reasoning uses the provider account you configure.
+- **Agent containment:** Niro applies kernel-level egress controls from
+  `scope.yaml`, so the pentest engine can only reach approved targets.
+- **Alert fatigue:** Niro checks code, tests, config, prior accepted behavior,
+  and existing PRs before opening a PR. Clear bugs become fix PRs;
+  intentional or ambiguous behavior is recorded for your review.
+- **Runaway cost:** customize `niro.yaml` to control time, cost, and
+  concurrency.
+- **Telemetry control:** usage telemetry is documented in
+  [TELEMETRY.md](TELEMETRY.md) and can be disabled in `niro.yaml`.
 
 ## Quickstart
 
-From the root of your repo:
+Pentest an application from your machine:
 
 ```bash
+git clone https://github.com/<your-org>/<your-repo>.git
+cd <your-repo>
+curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
 niro init
+claude "Pentest this application and create PRs."
 ```
 
-This scaffolds a `niro/` directory and wires Niro into your coding agent as
-an MCP server. Your agent decides when to call it from there — typically
-right before a push.
+See [Run Niro](docs/run-niro.md) for Windows installation, prerequisites, CI,
+and other coding-agent examples.
 
-**Commit the `niro/` directory and agent wiring** (`.mcp.json`, `.claude/`,
-etc.) so your whole team inherits the setup on the next pull — no one else
-needs to run `niro init`.
+## Ways To Run Niro
 
-> [!TIP]
-> Want to evaluate Niro on a whole application and have your agent open fix
-> PRs? See [Full Pentest to Fix PRs](docs/full-pentest-to-fix-prs.md).
+Niro runs locally or in CI, and can target a whole app, a focused scope, or a
+pull request.
 
-## What you control
+- **Local:** run from a developer machine when you want interactive control.
+- **CI:** run from a workflow when you want repeatable pentest-to-PR automation.
+- **Whole app or focused scope:** test the application area you choose.
+- **Pull request:** test changes before they merge.
 
-- **Pentest engine** runs in a local sandbox with default-deny egress. The
-  only reachable endpoints are the targets you list in `niro/scope.yaml`.
-- **Niro plugs into the coding agent you already use** — such as Claude
-  Code, GitHub Copilot, or OpenAI Codex — and lets it do the reasoning. Your
-  agent calls its LLM provider directly using the credentials already in your
-  shell. Niro doesn't have an API key and doesn't see yours. The bill arrives
-  on your provider account.
-- **Telemetry is opt-out.** When a pentest completes, Niro sends one usage
-  event. See [TELEMETRY.md](TELEMETRY.md) for the full details and how to turn
-  it off.
+See [Pentesting Without The Setup Tax](docs/pentesting-without-the-setup-tax.md)
+for harness, fixtures, and setup-gap handling.
+
+## References
+
+1. [ITPro on GitLab's AI code governance report](https://www.itpro.com/software/development/enterprises-are-shipping-so-much-ai-generated-code-they-cant-control-or-secure-it)
+2. [TechRadar on Salt Security's AI code risk research](https://www.techradar.com/pro/security/nearly-all-security-bosses-are-worried-about-ai-safety-with-a-third-saying-they-still-rely-on-manually-reviewing-code-before-launch)
 
 ## License
 
-Apache License 2.0 ([LICENSE](LICENSE), [NOTICE](NOTICE)). Install, run,
-redistribute, and build on Niro freely.
+Apache License 2.0 ([LICENSE](LICENSE), [NOTICE](NOTICE)).
 
 ## Issues
 
