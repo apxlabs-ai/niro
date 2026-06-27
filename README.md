@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/niro-logo.png" alt="Niro" width="420">
+  <img src="assets/niro-logo.png" alt="Niro" width="280">
 </p>
 
 # Niro
