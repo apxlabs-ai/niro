@@ -2,12 +2,13 @@
   <img src="assets/niro-logo.png" alt="Niro" width="280">
 </p>
 
-# Niro
+# Niro Community Edition
 
 > Security that keeps up with your developers.
 
-Niro pentests your running application and opens review-ready fix PRs with
-security regression tests, so security fixes land as normal pull requests.
+Niro Community Edition pentests your running application and opens
+review-ready fix PRs with security regression tests, so security fixes land as
+normal pull requests.
 
 Today, a pentest starts with a handoff: prepare a runtime, define scope, gather
 credentials and fixtures, wait for findings, triage them, reproduce them, write
@@ -63,6 +64,9 @@ hours.
   concurrency.
 - **Telemetry control:** usage telemetry is documented in
   [TELEMETRY.md](TELEMETRY.md) and can be disabled in `niro.yaml`.
+
+Need governance, audit, compliance controls, or enterprise deployment support?
+Talk to APX Labs about Niro Enterprise.
 
 ## Quickstart
 
