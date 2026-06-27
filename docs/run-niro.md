@@ -56,6 +56,21 @@ This scaffolds a `niro/` directory and wires Niro into your coding agent as an
 MCP server. Commit the generated project setup so the team shares the same
 configuration.
 
+## Trust Boundaries
+
+Niro runs in your local or CI environment. App traffic, credentials, test
+state, and generated artifacts stay there unless your workflow explicitly
+uploads or commits them.
+
+Niro uses the AI provider account configured through your coding agent. That
+provider may receive the context needed for reasoning, such as relevant code
+snippets, command output, errors, HTTP observations, and remediation context.
+Review your provider's data-retention and training terms before using Niro with
+sensitive systems.
+
+Niro does not require uploading your repository, credentials, findings, or logs
+to a Niro backend to complete a local or CI run.
+
 ## Local Runs
 
 Use local mode when a developer wants Niro available from their existing coding
@@ -126,3 +141,28 @@ limits:
 
 For harness, scope, credentials, fixtures, accepted behavior, and coverage-gap
 handling, see [Pentesting Without The Setup Tax](pentesting-without-the-setup-tax.md).
+
+## FAQ
+
+### What is MCP?
+
+[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro)
+is an open standard that lets AI applications connect to external tools and
+systems. After `niro init`, your coding agent can call Niro through MCP to
+scope, test, verify, and remediate the application from the current repo.
+
+### Does Niro replace a compliance pentest?
+
+No. Niro is designed for continuous pentest-to-fix work during development and
+CI. It helps reduce risk before formal audits or third-party pentests, but does
+not by itself replace auditor-required testing.
+
+### Will Niro upload logs or artifacts?
+
+No, not by default. Local runs keep artifacts on your machine. CI workflows only
+upload artifacts if the workflow is configured to do so.
+
+### Can I stop a long run?
+
+Yes. Stop the coding-agent process from your terminal or cancel the CI job. Any
+opened PRs, committed branches, or written artifacts remain for review.
