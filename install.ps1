@@ -4,7 +4,7 @@
 #   irm https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.ps1 | iex
 #
 # Environment variables:
-#   NIRO_VERSION       Pin to a specific tag (e.g. v0.1.0). Defaults to latest.
+#   NIRO_VERSION       Pin to a specific tag (e.g. v0.1.0). Defaults to v0.1.36.
 #   NIRO_INSTALL_DIR   Override install directory.
 #                      Defaults to %LOCALAPPDATA%\Programs\niro.
 
@@ -44,7 +44,7 @@ $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
     default { throw "unsupported architecture: $($env:PROCESSOR_ARCHITECTURE)" }
 }
 
-$version = if ($env:NIRO_VERSION) { $env:NIRO_VERSION } else { 'latest' }
+$version = if ($env:NIRO_VERSION) { $env:NIRO_VERSION } else { 'v0.1.36' }
 $archive = "niro_windows_${arch}.zip"
 $baseUrl = if ($version -eq 'latest') {
     # Resolve "latest" to the concrete tag so progress and success
