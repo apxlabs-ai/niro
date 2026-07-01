@@ -5,7 +5,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
 #
 # Environment variables:
-#   NIRO_VERSION       Pin to a specific tag (e.g. v0.1.0). Defaults to latest.
+#   NIRO_VERSION       Pin to a specific tag (e.g. v0.1.0). Defaults to v0.1.36.
 #   NIRO_INSTALL_DIR   Override install directory. Defaults to the first
 #                      writable PATH-resident directory found among:
 #                      /opt/homebrew/bin (Apple Silicon Homebrew),
@@ -78,7 +78,7 @@ case "$ARCH" in
   *) die "unsupported architecture: $ARCH" ;;
 esac
 
-VERSION="${NIRO_VERSION:-latest}"
+VERSION="${NIRO_VERSION:-v0.1.36}"
 ARCHIVE="niro_${OS}_${ARCH}.tar.gz"
 if [ "$VERSION" = "latest" ]; then
   # Resolve "latest" to the concrete tag so progress and success lines
