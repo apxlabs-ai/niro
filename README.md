@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="assets/niro-logo.png" alt="Niro" width="280">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/niro-logo-dark.png">
+    <img src="assets/niro-logo-light.png" alt="Niro" width="280">
+  </picture>
 </p>
 
 # Niro Community Edition
