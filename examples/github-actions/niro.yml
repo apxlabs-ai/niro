@@ -1,0 +1,113 @@
+name: Niro
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: "Agent to use"
+        required: true
+        type: choice
+        default: claude
+        options:
+          - claude
+          - codex
+          - copilot
+      goal:
+        description: "Goal for Niro. For remote targets, authorize scope in niro/scope.yaml."
+        required: true
+        default: "Pentest this application and create PRs."
+      upload_debug_artifacts:
+        description: "Upload debug logs to GitHub Actions artifacts"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  statuses: write
+
+concurrency:
+  group: niro-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    name: Pentest and open PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Niro
+        shell: bash
+        run: curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
+
+      - name: Install selected agent CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ inputs.agent }}" in
+            claude)  npm install -g @anthropic-ai/claude-code ;;
+            codex)   npm install -g @openai/codex ;;
+            copilot) npm install -g @github/copilot ;;
+            *) echo "unknown agent: ${{ inputs.agent }}" >&2; exit 2 ;;
+          esac
+
+      - name: Configure git
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Initialize Niro
+        shell: bash
+        run: niro init "$GITHUB_WORKSPACE"
+
+      - name: Run Niro with selected agent
+        shell: bash
+        env:
+          # GitHub token used by gh/GitHub APIs to push branches, open PRs,
+          # write PR comments, and publish commit statuses.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # Claude auth. Use CLAUDE_CODE_OAUTH_TOKEN for Claude Code
+          # subscription/OAuth; keep ANTHROPIC_API_KEY for API-key setups.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          # Codex/OpenAI auth.
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+          # Copilot BYOK via an OpenAI-compatible gateway. Remove this block if
+          # you do not use the copilot agent or do not route Copilot through BYOK.
+          COPILOT_PROVIDER_BASE_URL: https://openrouter.ai/api/v1
+          COPILOT_PROVIDER_TYPE: openai
+          COPILOT_PROVIDER_API_KEY: ${{ secrets.OPEN_ROUTER_API_KEY }}
+          COPILOT_MODEL: z-ai/glm-5.2
+
+          # Workflow input copied into env so arbitrary goal text stays data.
+          NIRO_GOAL: ${{ inputs.goal }}
+        run: run-niro "${{ inputs.agent }}" --goal "$NIRO_GOAL"
+
+      - name: Collect debug logs
+        if: always() && inputs.upload_debug_artifacts
+        shell: bash
+        run: niro-collect-debug-artifacts niro-debug-artifacts
+
+      - name: Upload debug logs as workflow artifact
+        if: always() && inputs.upload_debug_artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: niro-debug-logs-unsafe
+          path: niro-debug-artifacts/**
+          if-no-files-found: ignore
+          retention-days: 7
