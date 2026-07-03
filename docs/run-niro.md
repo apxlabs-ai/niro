@@ -112,10 +112,14 @@ secrets to `run-niro`. Docker remains a host prerequisite, just like local runs.
 
 ### Full Or Focused Run
 
-Use the open-PRs workflow when you want CI to pentest the app and open
-review-ready fix PRs.
+There are two GitHub Actions examples, matching **find → trust → fix**:
 
-See the [GitHub Actions open-PRs workflow example](../examples/github-actions/niro.yml).
+- [`niro-find.yml`](../examples/github-actions/niro-find.yml) — read-only. Pentests
+  the app and reports the findings without touching your repo (`contents: read`,
+  no tokens, no setup). Start here.
+- [`niro-fix.yml`](../examples/github-actions/niro-fix.yml) — pentests the app and
+  opens review-ready fix PRs. Needs write permissions; see the note by its
+  `permissions:` block about enabling PR creation.
 
 ### PR Run
 

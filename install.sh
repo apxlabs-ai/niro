@@ -18,6 +18,7 @@ REPO="apxlabs-ai/niro"
 BIN_NAME="niro"
 RUN_BIN_NAME="run-niro"
 DEBUG_BIN_NAME="niro-collect-debug-artifacts"
+KNOWLEDGE_BIN_NAME="niro-collect-knowledge"
 
 # ANSI colors for status prefixes. Yellow for Warning, red for Error.
 # Skip coloring if stdout isn't a tty (log capture) or NO_COLOR is set
@@ -118,7 +119,7 @@ printf "Installing to %s/%s\n" "$INSTALL_DIR" "$BIN_NAME"
 mkdir -p "$INSTALL_DIR"
 mv "${TMP}/${BIN_NAME}" "${INSTALL_DIR}/${BIN_NAME}"
 chmod +x "${INSTALL_DIR}/${BIN_NAME}"
-for helper in "$RUN_BIN_NAME" "$DEBUG_BIN_NAME"; do
+for helper in "$RUN_BIN_NAME" "$DEBUG_BIN_NAME" "$KNOWLEDGE_BIN_NAME"; do
   if [ -f "${TMP}/${helper}" ]; then
     printf "Installing to %s/%s\n" "$INSTALL_DIR" "$helper"
     mv "${TMP}/${helper}" "${INSTALL_DIR}/${helper}"

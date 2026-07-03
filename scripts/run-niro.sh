@@ -23,8 +23,11 @@ Options:
   -h, --help      show this help
 
 Env:
-  NIRO_GOAL       default goal when --goal is not set
-  NIRO_MODEL      default model when --model is not set
+  NIRO_GOAL          default goal when --goal is not set
+  NIRO_MODEL         default model when --model is not set
+  NIRO_SUMMARY_FILE  if set, also save the run summary to this path (it is
+                     still printed as usual). CI uses this to show the summary
+                     on the workflow run page.
 EOF
 }
 
@@ -130,25 +133,82 @@ GOAL
 )"
 fi
 
-case "$agent" in
-  claude)
-    # No --bare: it bypasses the OAuth-token auth path, so subscription auth
-    # (CLAUDE_CODE_OAUTH_TOKEN) fails with "Not logged in". --print alone gives
-    # the non-interactive output CI needs.
-    claude --print --dangerously-skip-permissions ${model_args[@]+"${model_args[@]}"} "$goal"
-    ;;
-  codex)
-    codex exec \
-      --dangerously-bypass-approvals-and-sandbox \
-      ${model_args[@]+"${model_args[@]}"} \
-      "$goal"
-    ;;
-  copilot)
-    GITHUB_COPILOT_PROMPT_MODE_WORKSPACE_MCP=true \
-      copilot -p "$goal" --yolo ${model_args[@]+"${model_args[@]}"}
-    ;;
-  *)
-    echo "run-niro: internal error: unvalidated agent '${agent}'" >&2
-    exit 1
-    ;;
-esac
+# Hand the coding agent the niro config directory explicitly, every run — it is
+# NIRO_CONFIG_DIR when set, else `niro/` at the project root. Resolve it to an
+# absolute path here: start_pentest requires an absolute niro_config_dir, and the
+# agent shouldn't have to convert a relative one (nor discover the dir at all).
+# Fail fast with a clear message if it's missing or unscaffolded, rather than
+# launching the agent only for it to stall on a bad config dir.
+config_dir="${NIRO_CONFIG_DIR:-niro}"
+config_dir_abs=$(cd "$config_dir" 2>/dev/null && pwd) \
+  || die "niro config dir '$config_dir' not found; set NIRO_CONFIG_DIR or run 'niro init'"
+[ -f "$config_dir_abs/niro.yaml" ] \
+  || die "niro config dir '$config_dir_abs' has no niro.yaml; run 'niro init' to scaffold it"
+goal="$goal
+
+Use the niro config directory at $config_dir_abs — this exact absolute path. Do not discover or substitute another."
+
+run_agent() {
+  case "$agent" in
+    claude)
+      # No --bare: it bypasses the OAuth-token auth path, so subscription auth
+      # (CLAUDE_CODE_OAUTH_TOKEN) fails with "Not logged in". --print alone gives
+      # the non-interactive output CI needs.
+      claude --print --dangerously-skip-permissions ${model_args[@]+"${model_args[@]}"} "$goal"
+      ;;
+    codex)
+      codex exec \
+        --dangerously-bypass-approvals-and-sandbox \
+        ${model_args[@]+"${model_args[@]}"} \
+        "$goal"
+      ;;
+    copilot)
+      GITHUB_COPILOT_PROMPT_MODE_WORKSPACE_MCP=true \
+        copilot -p "$goal" --yolo ${model_args[@]+"${model_args[@]}"}
+      ;;
+    *)
+      echo "run-niro: internal error: unvalidated agent '${agent}'" >&2
+      exit 1
+      ;;
+  esac
+}
+
+# The agent prints its final run summary to stdout. Capture that to
+# NIRO_SUMMARY_FILE (if set) while still streaming it to the log, so CI can
+# render it as a job summary. The capture is scoped to the agent command, so
+# run-niro's own diagnostics (all on stderr) can never leak into the summary.
+summary_file="${NIRO_SUMMARY_FILE:-/dev/null}"
+
+# Best-effort: ensure the summary directory exists so tee can write it.
+mkdir -p "$(dirname "$summary_file")" 2>/dev/null || true
+
+# PIPESTATUS[0] is the agent's own exit code — propagate that, not tee's, so
+# writing the summary can never fail an otherwise-successful run (nor mask a
+# failed one).
+set +e
+run_agent | tee "$summary_file"
+rc=${PIPESTATUS[0]}
+
+# If Niro changed the config dir this run, surface the committable files so the
+# developer can persist Niro's growing understanding of their app — committing
+# it makes future runs cheaper/faster/sharper instead of relearning. Uses git,
+# not the agent: gitignore-aware and filenames-only (never a secret value).
+# credentials.yaml, fixtures.yaml, findings/, and harness/run/ are excluded —
+# secrets / regenerated each run / run output (findings are already carried by
+# the fix PRs) / transient run state, none of which is the durable harness
+# knowledge worth committing. niro init gitignores these for the default niro/
+# dir; the explicit excludes below also cover a custom config dir, where they
+# may not be gitignored. Best-effort — errexit stays off so it can't touch the
+# run's exit code; skipped outside a git repo. Generic (no CI/artifact
+# assumptions); appended to the summary + echoed to stderr so it shows on a
+# local run too. config_dir was resolved and validated above.
+changed=$(git status --porcelain --untracked-files=all -- "$config_dir" \
+  ":(exclude)$config_dir/credentials.yaml" ":(exclude)$config_dir/fixtures.yaml" \
+  ":(exclude)$config_dir/findings" ":(exclude)$config_dir/harness/run" 2>/dev/null)
+if [ -n "$changed" ]; then
+  printf '\n💡 **Niro enhanced its knowledge of your app this run**, saved in `%s`. Review and commit it: this **compounds** — each run builds on the last, so keeping it makes future pentests cheaper, faster, and sharper instead of relearning from scratch.\n\n```\n%s\n```\n' \
+    "$config_dir" "$changed" | tee -a "$summary_file" >&2
+fi
+
+set -e
+exit "$rc"
