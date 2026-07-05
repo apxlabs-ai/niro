@@ -99,59 +99,6 @@ pull request.
 See [Pentesting Without The Setup Tax](docs/pentesting-without-the-setup-tax.md)
 for harness, fixtures, and setup-gap handling.
 
-## CI triage
-
-Use `niro triage` when CI needs a cheap PR screen before provisioning
-the runtime pentest container. Triage runs through the reasoner you
-specify (`claude`, `codex`, or `copilot`) and reads the forge snapshot
-for the PR diff, changed files, title, and body, then prints one
-JSON document:
-
-```sh
-NIRO_REASONER=claude # or codex / copilot
-
-niro triage \
-  --repo "$GITHUB_REPOSITORY" \
-  --pr-number "$PR_NUMBER" \
-  --reasoner "$NIRO_REASONER" \
-  --project-root "$GITHUB_WORKSPACE" > niro-triage.json
-```
-
-Use the same reasoner as the agent/runtime you want Niro to rely on:
-
-```sh
-niro triage --repo "$GITHUB_REPOSITORY" --pr-number "$PR_NUMBER" --reasoner claude
-niro triage --repo "$GITHUB_REPOSITORY" --pr-number "$PR_NUMBER" --reasoner codex
-niro triage --repo "$GITHUB_REPOSITORY" --pr-number "$PR_NUMBER" --reasoner copilot
-```
-
-If `.ok` is `false`, triage hit an operational failure: the recipe below
-hard-fails the CI step (`exit 1`) so the merge stays blocked even if the
-`Security / Niro` gate was never posted — never clear the security gate on
-an operational failure. If `.ok` is `true`, branch on `.pentest_required`:
-
-```sh
-jq -e '.ok' niro-triage.json >/dev/null || { echo "niro triage failed (operational)"; exit 1; }
-if jq -e '.pentest_required == true' niro-triage.json >/dev/null; then
-  niro pentest \
-    --reasoner "$NIRO_REASONER" \
-    --pr-number "$PR_NUMBER" \
-    --url "$PREVIEW_URL" \
-    --project-root "$GITHUB_WORKSPACE" > niro-pentest.json
-fi
-```
-
-Triage publishes to the same `Security / Niro` status and the same
-canonical PR comment that `niro pentest` uses. When
-`pentest_required` is `false`, the status is green (`success`) and
-the comment says `Pentest not required`. When `pentest_required` is
-`true`, the status is intentionally yellow (`pending`): the gate stays
-blocked until the follow-up `niro pentest` overwrites that same status
-with the final pass/fail result. Do not run `niro triage` by itself as
-a required branch-protection check unless your workflow also runs the
-second step when triage asks for a pentest; otherwise the pending state
-will look permanently stuck.
-
 ## References
 
 1. [ITPro on GitLab's AI code governance report](https://www.itpro.com/software/development/enterprises-are-shipping-so-much-ai-generated-code-they-cant-control-or-secure-it)

@@ -1,0 +1,265 @@
+#!/usr/bin/env bash
+#
+# niro-ci - CI orchestration wrapper for Niro find/fix workflows.
+#
+# This is the stable customer-facing CI entrypoint. Keep workflow YAML thin and
+# put install/init/run/summary/artifact preparation here.
+#
+set -euo pipefail
+
+NIRO_SCRIPT_NAME="niro-ci"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$script_dir/../scripts/ci/lib.sh" ]; then
+  ci_script_dir="$(cd "$script_dir/../scripts/ci" && pwd)"
+else
+  ci_script_dir="$script_dir"
+fi
+# shellcheck source=public/scripts/ci/lib.sh
+. "$ci_script_dir/lib.sh"
+# shellcheck source=public/scripts/ci/providers/generic.sh
+. "$ci_script_dir/providers/generic.sh"
+if [ -x "$ci_script_dir/collect-knowledge" ]; then
+  collect_knowledge_script="$ci_script_dir/collect-knowledge"
+else
+  collect_knowledge_script="$ci_script_dir/collect-knowledge.sh"
+fi
+if [ -x "$ci_script_dir/collect-debug-logs" ]; then
+  collect_debug_script="$ci_script_dir/collect-debug-logs"
+else
+  collect_debug_script="$ci_script_dir/collect-debug-logs.sh"
+fi
+
+usage() {
+  cat <<'EOF'
+Usage:
+  niro-ci find
+  niro-ci fix
+
+Environment:
+  NIRO_AGENT                         claude, codex, or copilot (default: claude)
+  NIRO_CONFIG_DIR                    config directory under repo root (default: niro)
+  NIRO_GOAL                          required goal for Niro
+  NIRO_MODEL                         optional model override for selected agent
+  NIRO_CI_ARTIFACT_INCLUDE_FINDINGS  include findings in niro-knowledge.tar (default: true)
+  NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS collect debug logs for upload (default: false)
+EOF
+}
+
+# Purpose: configure git for CI-owned reads and, in fix mode, commits.
+# Inputs: mode (find|fix), workspace path.
+# Output: updates git config; no stdout.
+# Exit code: returns 0 on success; git failures in fix mode propagate.
+ensure_git_config() {
+  local mode="$1"
+  local workspace="$2"
+
+  git config --global --add safe.directory "$workspace" 2>/dev/null || true
+  if [ "$mode" = "fix" ]; then
+    ci_configure_git_author
+  fi
+}
+
+# Purpose: ensure the selected Niro config directory exists and is initialized.
+# Inputs: workspace path, agent name, config directory path relative to workspace.
+# Output: runs `niro init` for the selected config dir and logs status to stderr.
+# Exit code: returns 0 on success; init or validation failures propagate.
+ensure_config_dir() {
+  local workspace="$1"
+  local agent="$2"
+  local config_dir="$3"
+
+  if [ -f "$workspace/$config_dir/niro.yaml" ]; then
+    niro_log "using existing $config_dir"
+  else
+    niro_log "initializing $config_dir"
+  fi
+
+  niro init "$workspace" --agent "$agent" --config-dir "$config_dir"
+  [ -f "$workspace/$config_dir/niro.yaml" ] \
+    || niro_die "niro init did not create $config_dir/niro.yaml"
+}
+
+# Purpose: publish the captured Niro summary through the current CI provider.
+# Inputs: summary file path.
+# Output: appends to the provider job summary when available.
+# Exit code: returns 0 unless the append fails.
+publish_summary() {
+  local summary_file="$1"
+
+  ci_append_summary "$summary_file"
+}
+
+# Purpose: run the selected coding agent with the prepared Niro goal.
+# Inputs: agent name, goal text, model_args array, and NIRO_CONFIG_DIR.
+# Output: streams agent stdout/stderr through tee into NIRO_SUMMARY_FILE.
+# Exit code: returns the selected agent command's exit code.
+run_agent() {
+  local config_dir_abs mode_instruction
+
+  niro_need_cmd "$agent"
+
+  # Claude Code refuses --dangerously-skip-permissions under root unless
+  # IS_SANDBOX is set. Most customers run on a user account; this keeps
+  # root-based CI/container jobs working without changing explicit caller state.
+  if [ "$(id -u)" = "0" ] && [ -z "${IS_SANDBOX:-}" ]; then
+    export IS_SANDBOX=1
+  fi
+
+  # `niro wait` is bounded at --max-wait=8m; Claude's Bash tool defaults below
+  # that. Raise Claude's default and ceiling so foreground waits can finish.
+  export NIRO_HEADLESS=1
+  export BASH_DEFAULT_TIMEOUT_MS=540000
+  export BASH_MAX_TIMEOUT_MS=540000
+
+  config_dir_abs=$(cd "$NIRO_CONFIG_DIR" 2>/dev/null && pwd) \
+    || niro_die "niro config dir '$NIRO_CONFIG_DIR' not found"
+  [ -f "$config_dir_abs/niro.yaml" ] \
+    || niro_die "niro config dir '$config_dir_abs' has no niro.yaml"
+
+  case "$mode" in
+    find)
+      mode_instruction="This is a Niro find run: pentest and report findings only. Do not create branches, commits, or pull requests."
+      ;;
+    fix)
+      mode_instruction="This is a Niro fix run: pentest and create review-ready fix pull requests for confirmed findings."
+      ;;
+    *)
+      niro_die "internal error: unvalidated mode '$mode'"
+      ;;
+  esac
+
+  goal="$goal
+
+$mode_instruction
+
+Use the niro config directory at $config_dir_abs — this exact absolute path. Do not discover or substitute another."
+
+  mkdir -p "$(dirname "$summary_file")" 2>/dev/null || true
+
+  case "$agent" in
+    claude)
+      claude --print --dangerously-skip-permissions ${model_args[@]+"${model_args[@]}"} "$goal"
+      ;;
+    codex)
+      codex exec \
+        --dangerously-bypass-approvals-and-sandbox \
+        ${model_args[@]+"${model_args[@]}"} \
+        "$goal"
+      ;;
+    copilot)
+      GITHUB_COPILOT_PROMPT_MODE_WORKSPACE_MCP=true \
+        copilot -p "$goal" --yolo ${model_args[@]+"${model_args[@]}"}
+      ;;
+    *)
+      niro_die "internal error: unvalidated agent '$agent'"
+      ;;
+  esac | tee "$summary_file"
+
+  return "${PIPESTATUS[0]}"
+}
+
+# Purpose: prepare the Niro knowledge tarball for CI artifact upload.
+# Inputs: none; reads NIRO_CONFIG_DIR and NIRO_CI_ARTIFACT_INCLUDE_FINDINGS.
+# Output: creates niro-knowledge.tar when there is knowledge to upload.
+# Exit code: returns 0 on success/no-op; exits 2 when helper is missing;
+# collector failures propagate.
+collect_knowledge() {
+  if [ ! -x "$collect_knowledge_script" ]; then
+    niro_die "collect-knowledge not found next to niro-ci"
+  fi
+
+  "$collect_knowledge_script" niro-knowledge.tar
+}
+
+# Purpose: prepare debug logs for CI artifact upload.
+# Inputs: none.
+# Output: creates niro-debug-artifacts/ when logs are available.
+# Exit code: returns 0 on success; exits 2 when helper is missing; collector
+# failures propagate.
+collect_debug_logs() {
+  if [ ! -x "$collect_debug_script" ]; then
+    niro_die "collect-debug-logs not found next to niro-ci"
+  fi
+
+  "$collect_debug_script" niro-debug-artifacts
+}
+
+mode="${1:-}"
+case "$mode" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  find|fix)
+    shift
+    ;;
+  "")
+    usage >&2
+    exit 2
+    ;;
+  *)
+    niro_die "unknown command '$mode'; expected find or fix"
+    ;;
+esac
+[ $# -eq 0 ] || niro_die "unexpected arguments: $*"
+
+niro_need_cmd niro
+niro_need_cmd git
+
+agent="${NIRO_AGENT:-claude}"
+config_dir="${NIRO_CONFIG_DIR:-niro}"
+goal="${NIRO_GOAL:-}"
+model="${NIRO_MODEL:-}"
+upload_debug_logs="${NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS:-false}"
+provider="$(ci_detect_provider)"
+if [ "$provider" = "github-actions" ]; then
+  # shellcheck source=public/scripts/ci/providers/github-actions.sh
+  . "$ci_script_dir/providers/github-actions.sh"
+fi
+workspace="$(ci_workspace)"
+summary_file="$(ci_temp_dir)/niro-summary.md"
+
+case "$agent" in
+  claude|codex|copilot) ;;
+  *) niro_die "unknown NIRO_AGENT '$agent'; expected claude, codex, or copilot" ;;
+esac
+[ -n "$goal" ] || niro_die "NIRO_GOAL is required"
+
+ci_require_fix_auth "$mode"
+
+cd "$workspace"
+
+if [ -z "${COPILOT_PROVIDER_API_KEY:-}" ] && [ -n "${OPEN_ROUTER_API_KEY:-}" ]; then
+  export COPILOT_PROVIDER_API_KEY="$OPEN_ROUTER_API_KEY"
+fi
+
+niro_install_agent "$agent"
+ensure_git_config "$mode" "$workspace"
+ensure_config_dir "$workspace" "$agent" "$config_dir"
+
+export NIRO_CONFIG_DIR="$config_dir"
+export NIRO_GOAL="$goal"
+export NIRO_SUMMARY_FILE="$summary_file"
+
+model_args=()
+if [ -n "$model" ]; then
+  model_args=(--model "$model")
+fi
+
+set +e
+run_agent
+rc=$?
+set -e
+
+publish_summary "$summary_file"
+collect_knowledge
+
+if niro_bool_enabled "$upload_debug_logs"; then
+  collect_debug_logs
+else
+  rm -rf niro-debug-artifacts 2>/dev/null || true
+fi
+
+ci_append_knowledge_note
+
+exit "$rc"

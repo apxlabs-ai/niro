@@ -1,35 +1,8 @@
-# Niro — Find: pentest this app and report what it finds — read only. It never
-# writes to your repo (no branches, no PRs, no commits): the permissions below are
-# contents: read, so even if something tried to push, GitHub would refuse. This is
-# the zero-setup way to see what Niro finds and build trust. When you want it to
-# also open review-ready fix PRs, use niro-fix.yml.
-name: Niro — Find
+name: Niro Find
 
 on:
   workflow_dispatch:
-    inputs:
-      agent:
-        description: "Agent to use"
-        required: true
-        type: choice
-        default: claude
-        options:
-          - claude
-          - codex
-          - copilot
-      goal:
-        description: "Goal for Niro. For remote targets, authorize scope in niro/scope.yaml."
-        required: true
-        default: "Pentest this application and report the findings."
-      upload_debug_artifacts:
-        description: "Upload debug logs as an artifact. ⚠️ UNSAFE — may contain secrets the agent handled at runtime (e.g. JWTs it captured or forged) and live request/response data. On a public repo, anyone can download it."
-        required: true
-        type: boolean
-        default: false
 
-# Read only by design: this workflow reads your code and tests your app, and
-# reports back — it never needs to write to the repo. Keeping it to contents:read
-# is what makes it safe to adopt with zero setup (no tokens, no toggles).
 permissions:
   contents: read
 
@@ -43,158 +16,48 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
 
+    env:
+      # To use Codex, Copilot, or other CI settings, see:
+      # https://github.com/apxlabs-ai/niro/blob/main/docs/ci-environment.md
+      NIRO_AGENT: claude
+      NIRO_CONFIG_DIR: niro
+      NIRO_GOAL: "Pentest this application"
+      NIRO_CI_ARTIFACT_INCLUDE_FINDINGS: "true"
+      NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS: "false"
+
     steps:
-      # Check out the repo Niro will test. fetch-depth: 0 pulls full history so
-      # git-based diffs work. Reads your code; writes nothing back.
       - name: Check out repository
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-          # A read-only run needs no git auth afterward — don't leave a token in
-          # .git/config for later steps or the agent to hold. Keeps the "no
-          # credentials" boundary real, not just "can't write".
           persist-credentials: false
 
-      # Install the niro CLI and its helper scripts (run-niro, the collectors)
-      # onto PATH.
-      - name: Install Niro
+      - name: Install Niro CI
         shell: bash
-        run: curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
+        run: curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install-ci.sh | sh
 
-      # Install the coding agent Niro drives, per the chosen input.
-      - name: Install selected agent CLI
-        shell: bash
-        run: |
-          set -euo pipefail
-          case "${{ inputs.agent }}" in
-            claude)  npm install -g @anthropic-ai/claude-code ;;
-            codex)   npm install -g @openai/codex ;;
-            copilot) npm install -g @github/copilot ;;
-            *) echo "unknown agent: ${{ inputs.agent }}" >&2; exit 2 ;;
-          esac
-
-      # This run only reads git (status/diff for its own bookkeeping) and never
-      # commits, so it just needs to trust the workspace dir.
-      - name: Configure git
-        shell: bash
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      # Scaffold a fresh niro/ config dir and the agent integration (.mcp.json +
-      # skill) on every run. If your repo already commits a full Niro setup under
-      # a different config dir — e.g. niro-prod/ for an environment-specific run —
-      # you can delete this step and instead point Niro at that dir with a
-      # job-level env block (add `env:` under `jobs.find`) containing
-      # NIRO_CONFIG_DIR: niro-prod. Set it at job scope, not on a single step, so
-      # run-niro AND the Collect Niro knowledge step below both read it. Niro then
-      # uses your committed setup as-is; re-run `niro init` locally after
-      # upgrading Niro to keep it current.
-      - name: Initialize Niro
-        shell: bash
-        run: niro init "$GITHUB_WORKSPACE" --agent "${{ inputs.agent }}" --no-hooks
-
-      # Run the pentest: run-niro launches the agent headless, which drives Niro
-      # to sweep, verify, and report findings — it opens nothing and writes nothing
-      # back to your repo. No GitHub token is needed or provided here.
       - name: Run Niro
         shell: bash
         env:
-          # Claude auth. Use CLAUDE_CODE_OAUTH_TOKEN for Claude Code
-          # subscription/OAuth; keep ANTHROPIC_API_KEY for API-key setups.
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-
-          # Codex/OpenAI auth.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
-          # Run Copilot on your own model key through an OpenAI-compatible
-          # gateway (here, OpenRouter). Delete this block if you are not using
-          # the copilot agent.
+          OPEN_ROUTER_API_KEY: ${{ secrets.OPEN_ROUTER_API_KEY }}
           COPILOT_PROVIDER_BASE_URL: https://openrouter.ai/api/v1
           COPILOT_PROVIDER_TYPE: openai
-          COPILOT_PROVIDER_API_KEY: ${{ secrets.OPEN_ROUTER_API_KEY }}
           COPILOT_MODEL: z-ai/glm-5.2
+        run: niro-ci find
 
-          # Pass your goal through an env var instead of inline in the command
-          # below, so any special characters in it can't break the shell.
-          NIRO_GOAL: ${{ inputs.goal }}
-
-          # Niro writes its findings summary to this file. The next step posts it
-          # to the run's Summary page, so you can read the findings without digging
-          # through the logs.
-          NIRO_SUMMARY_FILE: ${{ runner.temp }}/niro-summary.md
-        run: run-niro "${{ inputs.agent }}" --goal "$NIRO_GOAL"
-
-      # Post Niro's findings summary to the workflow's Summary page so it's
-      # readable without opening the logs. always() so it runs even if the pentest
-      # step failed.
-      - name: Publish findings summary
-        if: always()
-        shell: bash
-        env:
-          NIRO_SUMMARY_FILE: ${{ runner.temp }}/niro-summary.md
-        run: |
-          if [ -s "$NIRO_SUMMARY_FILE" ]; then
-            cat "$NIRO_SUMMARY_FILE" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      # Stage what Niro learned about your app this run (scope, harness scripts,
-      # accepted-behaviors) so the next step can upload it for you to commit.
-      - name: Collect Niro knowledge
-        if: always()
-        shell: bash
-        # Guard the helper: an older niro install — or this example mirrored
-        # before the release that ships niro-collect-knowledge — may not have it
-        # on PATH (install.sh only installs helpers present in the archive).
-        # Skip rather than fail an otherwise-successful run.
-        run: |
-          if command -v niro-collect-knowledge >/dev/null 2>&1; then
-            niro-collect-knowledge niro-knowledge.tar
-          else
-            echo "niro-collect-knowledge not installed; skipping knowledge collection"
-          fi
-
-      # Upload that staged knowledge as the niro-knowledge artifact for you to
-      # download and commit.
       - name: Upload Niro knowledge
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          # What Niro learned about your app this run: scope, harness scripts,
-          # accepted-behaviors — never secrets or run state. It's a tar so file
-          # modes (executable harness scripts) and dotfiles (.gitignore) survive,
-          # which a plain directory artifact would lose. Extract it over your repo,
-          # review the delta against your committed niro/, and commit; this
-          # knowledge compounds, so keeping it makes the next pentest cheaper and
-          # sharper. Uploaded only when the run actually changed something (the
-          # collect step writes no archive otherwise, and if-no-files-found skips).
           name: niro-knowledge
           path: niro-knowledge.tar
           if-no-files-found: ignore
           retention-days: 30
 
-      # run-niro's summary says Niro enhanced its knowledge and to commit it —
-      # true locally, where the files sit in the working tree. On CI the runner
-      # is discarded when the job ends, so add the one thing that message can't
-      # know: the durable copy is the artifact. Gated on a real delta (same
-      # condition that produced the artifact), so it never shows on a no-op run.
-      - name: Point to the Niro knowledge artifact
-        if: always()
-        shell: bash
-        run: |
-          if [ -f niro-knowledge.tar ]; then
-            printf '\n📥 This runner is discarded when the job ends — download the **niro-knowledge** artifact from this run, extract `niro-knowledge.tar` over your repo root, and commit it to keep what Niro learned.\n' >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      # Opt-in (upload_debug_artifacts): gather Niro and agent logs for debugging
-      # a run. Off by default — the logs can contain secrets and live traffic.
-      - name: Collect debug logs
-        if: always() && inputs.upload_debug_artifacts
-        shell: bash
-        run: niro-collect-debug-artifacts niro-debug-artifacts
-
-      # Upload those debug logs as an artifact (only when the opt-in is enabled).
-      - name: Upload debug logs as workflow artifact
-        if: always() && inputs.upload_debug_artifacts
+      - name: Upload debug logs
+        if: always() && contains(fromJSON('["true","TRUE","1","yes","YES","on","ON"]'), env.NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS)
         uses: actions/upload-artifact@v7
         with:
           name: niro-debug-logs-unsafe

@@ -1,4 +1,13 @@
 #!/usr/bin/env bash
+#
+# Purpose: collect Niro and coding-agent debug logs for CI artifact upload.
+# Inputs:
+#   $1               optional output directory; defaults to niro-debug-artifacts
+#   XDG_CACHE_HOME   optional cache root; defaults to $HOME/.cache
+#   HOME             used to locate agent log directories
+# Output: creates a debug-log directory tree when logs are available.
+# Exit code: 0 on success, including partial/no logs; non-zero for setup failures.
+#
 set -euo pipefail
 
 out="${1:-niro-debug-artifacts}"
@@ -7,6 +16,10 @@ niro_log_dir="$cache_dir/niro/logs"
 
 mkdir -p "$out"
 
+# Purpose: copy one log directory into the debug bundle.
+# Inputs: source directory, destination directory.
+# Output: copies files except transient *.lock files; skips missing sources.
+# Exit code: 0 on success or missing source; tar/mkdir failures may return non-zero.
 copy_dir() {
   local src="$1"
   local dst="$2"
