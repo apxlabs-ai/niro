@@ -28,6 +28,15 @@ ci_temp_dir() {
   printf '%s\n' "${TMPDIR:-/tmp}"
 }
 
+# Purpose: describe the run environment to the agent, appended to its goal.
+# Inputs: none.
+# Output: prints provider-neutral facts (no artifact/preservation claims —
+#   the generic path uploads nothing and may be a local invocation).
+# Exit code: returns 0.
+ci_run_context() {
+  printf '%s' "You are running non-interactively — there is no user to prompt or hand back to during this run."
+}
+
 # Purpose: append a markdown file to the CI job summary when supported.
 # Inputs: summary file path.
 # Output: no-op for generic CI.

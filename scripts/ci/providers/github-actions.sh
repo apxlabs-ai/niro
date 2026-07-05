@@ -16,6 +16,15 @@ ci_temp_dir() {
   printf '%s\n' "${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
 }
 
+# Purpose: describe the run environment to the agent, appended to its goal.
+# Inputs: none.
+# Output: prints GitHub Actions run facts (unattended; only the config dir
+#   survives as the run artifact, the rest of the runner is discarded).
+# Exit code: returns 0.
+ci_run_context() {
+  printf '%s' "You are running inside CI (GitHub Actions), unattended — no human watches live. When the job ends, only the Niro config dir is preserved (captured as this run's artifact); everything else on the runner is discarded."
+}
+
 # Purpose: append a markdown file to the GitHub Actions job summary.
 # Inputs: summary file path.
 # Output: appends to $GITHUB_STEP_SUMMARY when available.

@@ -75,7 +75,7 @@ ensure_config_dir() {
     niro_log "initializing $config_dir"
   fi
 
-  niro init "$workspace" --agent "$agent" --config-dir "$config_dir"
+  niro init "$workspace" --agent "$agent" --config-dir "$config_dir" --quiet
   [ -f "$workspace/$config_dir/niro.yaml" ] \
     || niro_die "niro init did not create $config_dir/niro.yaml"
 }
@@ -106,7 +106,7 @@ make_default_progress_file() {
 
 # Purpose: stream Niro progress JSONL messages to CI stdout.
 # Inputs: progress file path.
-# Output: prints each event's message field as it is appended.
+# Output: prints each event's timestamp and message as it is appended.
 # Exit code: starts a background tailer; returns 0 unless setup fails.
 start_progress_stream() {
   local progress_file="$1"
@@ -129,13 +129,22 @@ def request_stop(_signum, _frame):
     global stopping
     stopping = True
 
+def format_time(ts):
+    if ts.endswith("Z"):
+        ts = ts[:-1]
+    if "T" in ts:
+        ts = ts.rsplit("T", 1)[-1]
+    return ts or time.strftime("%H:%M:%S", time.gmtime())
+
 def print_event(line):
     try:
-        msg = json.loads(line).get("message", "")
+        event = json.loads(line)
     except Exception:
-        msg = ""
+        event = {}
+    msg = event.get("message", "")
     if msg:
-        print(msg, flush=True)
+        ts = format_time(event.get("ts", ""))
+        print(f"[{ts}] {msg}", flush=True)
 
 signal.signal(signal.SIGINT, request_stop)
 signal.signal(signal.SIGTERM, request_stop)
@@ -152,7 +161,7 @@ with open(path, "r", encoding="utf-8") as f:
         print_event(line)
 ' "$progress_file" &
   else
-    tail -n 0 -f "$progress_file" | sed -u -n 's/^.*"message":"\([^"]*\)".*$/\1/p' &
+    tail -n 0 -f "$progress_file" | sed -u -n 's/^.*"ts":"[^T]*T\([^Z"]*\)Z","message":"\([^"]*\)".*$/[\1] \2/p' &
   fi
   progress_stream_pid=$!
 }
@@ -176,7 +185,7 @@ stop_progress_stream() {
 # Output: streams agent stdout/stderr through tee into NIRO_SUMMARY_FILE.
 # Exit code: returns the selected agent command's exit code.
 run_agent() {
-  local config_dir_abs mode_instruction
+  local config_dir_abs mode_instruction ci_context
 
   niro_need_cmd "$agent"
 
@@ -210,9 +219,13 @@ run_agent() {
       ;;
   esac
 
+  ci_context="$(ci_run_context)"
+
   goal="$goal
 
 $mode_instruction
+
+$ci_context
 
 Use the niro config directory at $config_dir_abs — this exact absolute path. Do not discover or substitute another."
 
