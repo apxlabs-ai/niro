@@ -40,6 +40,7 @@ Environment:
   NIRO_CONFIG_DIR                    config directory under repo root (default: niro)
   NIRO_GOAL                          required goal for Niro
   NIRO_MODEL                         optional model override for selected agent
+  NIRO_PROGRESS_FILE                 optional JSONL progress stream path
   NIRO_CI_ARTIFACT_INCLUDE_FINDINGS  include findings in niro-knowledge.tar (default: true)
   NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS collect debug logs for upload (default: false)
 EOF
@@ -87,6 +88,87 @@ publish_summary() {
   local summary_file="$1"
 
   ci_append_summary "$summary_file"
+}
+
+# Purpose: create a unique default Niro progress file for this wrapper run.
+# Inputs: none; uses ci_temp_dir.
+# Output: prints the created progress file path.
+# Exit code: returns 0 on success; exits 2 when the file cannot be created.
+make_default_progress_file() {
+  local tmp_dir path
+
+  tmp_dir="$(ci_temp_dir)"
+  mkdir -p "$tmp_dir" 2>/dev/null || true
+  path="$(mktemp "$tmp_dir/niro-progress.XXXXXX")" \
+    || niro_die "failed to create progress file in $tmp_dir"
+  printf '%s\n' "$path"
+}
+
+# Purpose: stream Niro progress JSONL messages to CI stdout.
+# Inputs: progress file path.
+# Output: prints each event's message field as it is appended.
+# Exit code: starts a background tailer; returns 0 unless setup fails.
+start_progress_stream() {
+  local progress_file="$1"
+
+  mkdir -p "$(dirname "$progress_file")" 2>/dev/null || true
+  touch "$progress_file"
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c '
+import json
+import os
+import signal
+import sys
+import time
+
+path = sys.argv[1]
+stopping = False
+
+def request_stop(_signum, _frame):
+    global stopping
+    stopping = True
+
+def print_event(line):
+    try:
+        msg = json.loads(line).get("message", "")
+    except Exception:
+        msg = ""
+    if msg:
+        print(msg, flush=True)
+
+signal.signal(signal.SIGINT, request_stop)
+signal.signal(signal.SIGTERM, request_stop)
+
+with open(path, "r", encoding="utf-8") as f:
+    f.seek(0, os.SEEK_END)
+    while True:
+        line = f.readline()
+        if not line:
+            if stopping:
+                break
+            time.sleep(0.2)
+            continue
+        print_event(line)
+' "$progress_file" &
+  else
+    tail -n 0 -f "$progress_file" | sed -u -n 's/^.*"message":"\([^"]*\)".*$/\1/p' &
+  fi
+  progress_stream_pid=$!
+}
+
+# Purpose: stop the background progress stream.
+# Inputs: progress_stream_pid optional global.
+# Output: none.
+# Exit code: returns 0.
+stop_progress_stream() {
+  if [ -n "${progress_stream_pid:-}" ]; then
+    # Let the streamer consume events written immediately before run_agent exited.
+    sleep 1
+    kill "$progress_stream_pid" 2>/dev/null || true
+    wait "$progress_stream_pid" 2>/dev/null || true
+    progress_stream_pid=""
+  fi
 }
 
 # Purpose: run the selected coding agent with the prepared Niro goal.
@@ -218,6 +300,8 @@ if [ "$provider" = "github-actions" ]; then
 fi
 workspace="$(ci_workspace)"
 summary_file="$(ci_temp_dir)/niro-summary.md"
+progress_stream_pid=""
+trap stop_progress_stream EXIT
 
 case "$agent" in
   claude|codex|copilot) ;;
@@ -240,16 +324,22 @@ ensure_config_dir "$workspace" "$agent" "$config_dir"
 export NIRO_CONFIG_DIR="$config_dir"
 export NIRO_GOAL="$goal"
 export NIRO_SUMMARY_FILE="$summary_file"
+if [ -z "${NIRO_PROGRESS_FILE:-}" ]; then
+  NIRO_PROGRESS_FILE="$(make_default_progress_file)"
+  export NIRO_PROGRESS_FILE
+fi
 
 model_args=()
 if [ -n "$model" ]; then
   model_args=(--model "$model")
 fi
 
+start_progress_stream "$NIRO_PROGRESS_FILE"
 set +e
 run_agent
 rc=$?
 set -e
+stop_progress_stream
 
 publish_summary "$summary_file"
 collect_knowledge
