@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "grep -Eq '\"run_in_background\"[[:space:]]*:[[:space:]]*true' && printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Background bash is disabled in CI runs. Re-run without run_in_background so the foreground stream captures completion.\"}}' || true"
+          }
+        ]
+      }
+    ]
+  }
+}

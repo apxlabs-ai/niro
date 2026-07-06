@@ -80,31 +80,29 @@ curl -fsSL -o "${TMP}/checksums.txt" "${BASE_URL}/checksums.txt" \
 tar -xzf "${TMP}/${ARCHIVE}" -C "$TMP"
 
 mkdir -p "$BIN_DIR" "$CI_SCRIPT_DIR" "$CI_PROVIDER_DIR"
-for bin in "$BIN_NAME" "bin/$CI_BIN_NAME"; do
-  [ -f "${TMP}/${bin}" ] || die "release archive missing required CI file: $bin"
-done
-for script in scripts/ci/lib.sh scripts/ci/collect-knowledge scripts/ci/collect-debug-logs scripts/ci/providers/generic.sh scripts/ci/providers/github-actions.sh; do
-  [ -f "${TMP}/${script}" ] || die "release archive missing required CI file: $script"
-done
+[ -f "${TMP}/${BIN_NAME}" ] || die "release archive missing required file: $BIN_NAME"
 
 printf "Installing to %s/%s\n" "$BIN_DIR" "$BIN_NAME"
 mv "${TMP}/${BIN_NAME}" "${BIN_DIR}/${BIN_NAME}"
 chmod +x "${BIN_DIR}/${BIN_NAME}"
 
-printf "Installing to %s/%s\n" "$BIN_DIR" "$CI_BIN_NAME"
-mv "${TMP}/bin/${CI_BIN_NAME}" "${BIN_DIR}/${CI_BIN_NAME}"
-chmod +x "${BIN_DIR}/${CI_BIN_NAME}"
-
-for script in lib.sh collect-knowledge collect-debug-logs; do
-  printf "Installing to %s/%s\n" "$CI_SCRIPT_DIR" "$script"
-  mv "${TMP}/scripts/ci/${script}" "${CI_SCRIPT_DIR}/${script}"
-  chmod +x "${CI_SCRIPT_DIR}/${script}"
-done
-for provider in generic.sh github-actions.sh; do
-  printf "Installing to %s/%s\n" "$CI_PROVIDER_DIR" "$provider"
-  mv "${TMP}/scripts/ci/providers/${provider}" "${CI_PROVIDER_DIR}/${provider}"
-  chmod +x "${CI_PROVIDER_DIR}/${provider}"
-done
+# CI scripts and settings come from the published repo (raw main), not the
+# release archive: they are plain text iterated independently of the binary, so
+# publishing the public repo ships a change without a new release. Same origin
+# and trust as this installer itself. Override the ref with NIRO_CI_REF.
+RAW_BASE="https://raw.githubusercontent.com/${REPO}/${NIRO_CI_REF:-main}"
+printf "Fetching CI scripts from %s\n" "${NIRO_CI_REF:-main}"
+fetch_ci() {
+  curl -fsSL -o "$2" "${RAW_BASE}/$1" || die "download failed: ${RAW_BASE}/$1"
+  if [ "${3:-}" = "x" ]; then chmod +x "$2"; fi
+}
+fetch_ci scripts/ci/niro-ci.sh                     "${BIN_DIR}/${CI_BIN_NAME}"             x
+fetch_ci scripts/ci/lib.sh                         "${CI_SCRIPT_DIR}/lib.sh"
+fetch_ci scripts/ci/collect-knowledge.sh           "${CI_SCRIPT_DIR}/collect-knowledge"   x
+fetch_ci scripts/ci/collect-debug-logs.sh          "${CI_SCRIPT_DIR}/collect-debug-logs"  x
+fetch_ci scripts/ci/providers/generic.sh           "${CI_PROVIDER_DIR}/generic.sh"
+fetch_ci scripts/ci/providers/github-actions.sh    "${CI_PROVIDER_DIR}/github-actions.sh"
+fetch_ci scripts/ci/providers/claude.settings.json "${CI_PROVIDER_DIR}/claude.settings.json"
 
 printf "\nniro %s CI tools installed. Run \`niro-ci find\` or \`niro-ci fix\` from CI.\n" "$VERSION"
 

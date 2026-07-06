@@ -185,7 +185,7 @@ stop_progress_stream() {
 # Output: streams agent stdout/stderr through tee into NIRO_SUMMARY_FILE.
 # Exit code: returns the selected agent command's exit code.
 run_agent() {
-  local config_dir_abs mode_instruction ci_context
+  local config_dir_abs mode_instruction ci_context settings_file settings_args
 
   niro_need_cmd "$agent"
 
@@ -233,7 +233,14 @@ Use the niro config directory at $config_dir_abs — this exact absolute path. D
 
   case "$agent" in
     claude)
-      claude --print --dangerously-skip-permissions ${model_args[@]+"${model_args[@]}"} "$goal"
+      # CI-only settings: a PreToolUse hook that blocks background bash so the
+      # foreground stream keeps the process (and the MCP-hosted pentest) alive
+      # to completion. Merges with the project .claude/settings.json (its
+      # PostToolUse hook still fires). Guarded for older installs missing it.
+      settings_file="$ci_script_dir/providers/claude.settings.json"
+      settings_args=()
+      [ -f "$settings_file" ] && settings_args=(--settings "$settings_file")
+      claude --print --dangerously-skip-permissions ${settings_args[@]+"${settings_args[@]}"} ${model_args[@]+"${model_args[@]}"} "$goal"
       ;;
     codex)
       codex exec \
