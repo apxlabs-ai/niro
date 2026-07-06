@@ -233,6 +233,10 @@ Use the niro config directory at $config_dir_abs — this exact absolute path. D
 
   case "$agent" in
     claude)
+      # Claude Code --print has its own background-task wait ceiling. CI runs
+      # are bounded by the job/Niro deadlines, so do not let Claude's 600s
+      # default kill delegated work such as slow harness builds.
+      export CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0
       # CI-only settings: a PreToolUse hook that blocks background bash so the
       # foreground stream keeps the process (and the MCP-hosted pentest) alive
       # to completion. Merges with the project .claude/settings.json (its
