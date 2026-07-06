@@ -224,10 +224,12 @@ stop_progress_stream() {
 
 # Purpose: run the selected coding agent with the prepared Niro goal.
 # Inputs: agent name, goal text, model_args array, and NIRO_CONFIG_DIR.
-# Output: streams agent stdout/stderr through tee into NIRO_SUMMARY_FILE.
+# Output: streams agent stdout through tee into NIRO_SUMMARY_FILE. Codex stderr
+# is captured and only tailed when Codex fails, to keep CI logs readable.
 # Exit code: returns the selected agent command's exit code.
 run_agent() {
   local config_dir_abs mode_instruction ci_context settings_file settings_args
+  local codex_stderr_file rc
 
   niro_need_cmd "$agent"
 
@@ -272,6 +274,12 @@ $ci_context
 Use the niro config directory at $config_dir_abs — this exact absolute path. Do not discover or substitute another."
 
   mkdir -p "$(dirname "$summary_file")" 2>/dev/null || true
+  codex_stderr_file=""
+  if [ "$agent" = "codex" ]; then
+    codex_stderr_file="$(ci_temp_dir)/codex-stderr.log"
+    : > "$codex_stderr_file" \
+      || niro_die "failed to create Codex stderr log '$codex_stderr_file'"
+  fi
 
   case "$agent" in
     claude)
@@ -292,7 +300,8 @@ Use the niro config directory at $config_dir_abs — this exact absolute path. D
       codex exec \
         --dangerously-bypass-approvals-and-sandbox \
         ${model_args[@]+"${model_args[@]}"} \
-        "$goal"
+        "$goal" \
+        2>"$codex_stderr_file"
       ;;
     copilot)
       GITHUB_COPILOT_PROMPT_MODE_WORKSPACE_MCP=true \
@@ -303,7 +312,19 @@ Use the niro config directory at $config_dir_abs — this exact absolute path. D
       ;;
   esac | tee "$summary_file"
 
-  return "${PIPESTATUS[0]}"
+  rc="${PIPESTATUS[0]}"
+  if [ "$agent" = "codex" ]; then
+    if [ "$rc" -ne 0 ] && [ -s "$codex_stderr_file" ]; then
+      {
+        printf '::group::Codex stderr tail\n'
+        tail -n 120 "$codex_stderr_file" || true
+        printf '::endgroup::\n'
+      } >&2
+    fi
+    rm -f "$codex_stderr_file" 2>/dev/null || true
+  fi
+
+  return "$rc"
 }
 
 # Purpose: prepare the Niro knowledge tarball for CI artifact upload.
