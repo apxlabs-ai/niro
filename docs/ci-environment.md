@@ -39,6 +39,30 @@ Only needed for workflows that create fix PRs.
 | Secret | Purpose |
 | --- | --- |
 | `OPENAI_API_KEY` | Authenticates Codex with OpenAI. |
+| `CODEX_AUTH_JSON_B64` | Optional alternative to API-key auth. Base64-encoded Codex `auth.json`; `niro-ci` restores this secret to `${CODEX_HOME:-$HOME/.codex}/auth.json` before running Codex. |
+
+When `CODEX_HOME` is set, Codex expects that directory to already exist. The
+`niro-ci` restore step creates it before restoring `auth.json`. If
+`CODEX_AUTH_JSON_B64` is not set, `niro-ci` leaves Codex authentication alone,
+so Codex can use its configured authentication, such as an existing login cache,
+`OPENAI_API_KEY`, `CODEX_ACCESS_TOKEN`, or another Codex-supported provider
+setting.
+
+`CODEX_AUTH_JSON_B64` is a static snapshot of a local Codex login. Codex may
+refresh `auth.json` during a run, but GitHub-hosted runners discard the refreshed
+file when the job ends. For recurring hosted runs, refresh this secret
+periodically. For long-lived subscription-backed CI, prefer a self-hosted runner
+with a persistent `CODEX_HOME` so Codex can refresh `auth.json` in place.
+
+`CODEX_API_KEY` is intentionally not shown in the workflow examples. Codex
+supports it for `codex exec`, but recommends setting it only for that single
+process invocation rather than exposing it to the whole CI job environment.
+
+To create the base64 value for `CODEX_AUTH_JSON_B64` from a local Codex login:
+
+```bash
+base64 < ~/.codex/auth.json | tr -d '\n'
+```
 
 ### Copilot
 

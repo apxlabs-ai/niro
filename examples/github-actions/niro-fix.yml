@@ -41,6 +41,7 @@ jobs:
       - name: Run Niro
         shell: bash
         env:
+          CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
           GH_TOKEN: ${{ secrets.NIRO_PR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.NIRO_PR_TOKEN }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}

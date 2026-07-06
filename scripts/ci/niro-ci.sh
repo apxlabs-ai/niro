@@ -43,6 +43,7 @@ Environment:
   NIRO_PROGRESS_FILE                 optional JSONL progress stream path
   NIRO_CI_ARTIFACT_INCLUDE_FINDINGS  include findings in niro-knowledge.tar (default: true)
   NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS collect debug logs for upload (default: false)
+  CODEX_AUTH_JSON_B64                optional base64-encoded Codex auth.json for NIRO_AGENT=codex
 EOF
 }
 
@@ -78,6 +79,47 @@ ensure_config_dir() {
   niro init "$workspace" --agent "$agent" --config-dir "$config_dir" --quiet
   [ -f "$workspace/$config_dir/niro.yaml" ] \
     || niro_die "niro init did not create $config_dir/niro.yaml"
+}
+
+# Purpose: restore a base64-encoded Codex auth.json for CI jobs that cannot run
+# an interactive Codex login. The secret is removed from the environment before
+# the agent starts so child processes do not inherit the raw base64 blob.
+# Inputs: CODEX_AUTH_JSON_B64, CODEX_HOME, HOME, selected agent.
+# Output: writes ${CODEX_HOME:-$HOME/.codex}/auth.json when configured.
+# Exit code: returns 0 on success/no-op; decode or filesystem failures exit.
+restore_codex_auth_json() {
+  local auth_dir auth_file
+
+  if [ "$agent" != "codex" ]; then
+    unset CODEX_AUTH_JSON_B64
+    return 0
+  fi
+  if [ -z "${CODEX_AUTH_JSON_B64:-}" ]; then
+    return 0
+  fi
+
+  if [ -n "${CODEX_HOME:-}" ]; then
+    auth_dir="$CODEX_HOME"
+  elif [ -n "${HOME:-}" ]; then
+    auth_dir="$HOME/.codex"
+  else
+    niro_die "CODEX_AUTH_JSON_B64 is set but neither CODEX_HOME nor HOME is available"
+  fi
+  auth_file="$auth_dir/auth.json"
+
+  mkdir -p "$auth_dir" \
+    || niro_die "failed to create Codex auth directory '$auth_dir'"
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import base64, os, sys; sys.stdout.buffer.write(base64.b64decode(os.environ["CODEX_AUTH_JSON_B64"]))' > "$auth_file" \
+      || { rm -f "$auth_file"; unset CODEX_AUTH_JSON_B64; niro_die "failed to decode CODEX_AUTH_JSON_B64"; }
+  else
+    printf '%s' "$CODEX_AUTH_JSON_B64" | base64 -d > "$auth_file" \
+      || { rm -f "$auth_file"; unset CODEX_AUTH_JSON_B64; niro_die "failed to decode CODEX_AUTH_JSON_B64"; }
+  fi
+  chmod 600 "$auth_file" \
+    || niro_die "failed to chmod Codex auth file '$auth_file'"
+  unset CODEX_AUTH_JSON_B64
+  niro_log "restored Codex auth.json from CODEX_AUTH_JSON_B64"
 }
 
 # Purpose: publish the captured Niro summary through the current CI provider.
@@ -344,6 +386,7 @@ fi
 niro_install_agent "$agent"
 ensure_git_config "$mode" "$workspace"
 ensure_config_dir "$workspace" "$agent" "$config_dir"
+restore_codex_auth_json
 
 export NIRO_CONFIG_DIR="$config_dir"
 export NIRO_GOAL="$goal"
