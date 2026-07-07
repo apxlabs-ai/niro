@@ -32,18 +32,20 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
         with:
-          token: ${{ secrets.NIRO_PR_TOKEN }}
+          # Niro pushes and opens PRs with a fresh GitHub App token, so the
+          # checkout must not leave its own credential behind for git to use.
+          persist-credentials: false
 
-      - name: Install Niro CI
+      - name: Install Niro
         shell: bash
-        run: curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install-ci.sh | sh
+        run: curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
 
       - name: Run Niro
         shell: bash
         env:
           CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
-          GH_TOKEN: ${{ secrets.NIRO_PR_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.NIRO_PR_TOKEN }}
+          NIRO_APP_CLIENT_ID: ${{ secrets.NIRO_APP_CLIENT_ID }}
+          NIRO_APP_PRIVATE_KEY: ${{ secrets.NIRO_APP_PRIVATE_KEY }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -51,7 +53,7 @@ jobs:
           COPILOT_PROVIDER_BASE_URL: https://openrouter.ai/api/v1
           COPILOT_PROVIDER_TYPE: openai
           COPILOT_MODEL: z-ai/glm-5.2
-        run: niro-ci fix
+        run: niro ci fix
 
       - name: Upload Niro knowledge
         if: always()
@@ -67,6 +69,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: niro-debug-logs-unsafe
-          path: niro-debug-artifacts/**
+          path: niro-debug-logs.tar
           if-no-files-found: ignore
           retention-days: 7

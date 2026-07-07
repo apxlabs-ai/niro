@@ -106,9 +106,8 @@ codex exec "Pentest the current pull request."
 Use CI mode when you want a repeatable workflow that can pentest the app and
 open fix PRs without a developer sitting at the keyboard.
 
-Run Niro directly on the CI runner VM. The workflow uses `install-ci.sh`, then
-calls `niro-ci find` or `niro-ci fix`; that helper installs the selected agent,
-initializes Niro, runs the pentest, and prepares summaries/artifacts. Docker
+Run Niro directly on the CI runner VM: `niro ci find` pentests the app and
+reports findings, and `niro ci fix` also opens review-ready fix PRs. Docker
 remains a host prerequisite, just like local runs.
 
 ### Full Or Focused Run

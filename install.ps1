@@ -96,10 +96,17 @@ try {
     Write-Host ""
     Write-Host "niro $version installed. Run ``niro init`` to get started."
 
-    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-    if ($userPath -notlike "*$InstallDir*") {
-        [Environment]::SetEnvironmentVariable('Path', "$userPath;$InstallDir", 'User')
-        Write-Warn "$InstallDir added to your user PATH. Open a new terminal for the change to take effect."
+    # On GitHub Actions, expose the install dir to later workflow steps so
+    # `niro ci find` / `niro collect ...` resolve without a PATH edit. Off CI
+    # ($env:GITHUB_PATH is unset), persist to the user PATH instead.
+    if ($env:GITHUB_PATH) {
+        Add-Content -Path $env:GITHUB_PATH -Value $InstallDir
+    } else {
+        $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+        if ($userPath -notlike "*$InstallDir*") {
+            [Environment]::SetEnvironmentVariable('Path', "$userPath;$InstallDir", 'User')
+            Write-Warn "$InstallDir added to your user PATH. Open a new terminal for the change to take effect."
+        }
     }
 
     # niro spawns pentests inside containers, so it needs Docker,

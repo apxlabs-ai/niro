@@ -1,5 +1,9 @@
 #!/usr/bin/env sh
-# Niro installer for macOS and Linux.
+# Niro installer for macOS and Linux — works on laptops and in CI.
+#
+# Installs the `niro` binary. On GitHub Actions it also adds the install
+# directory to $GITHUB_PATH so later steps can call `niro`; off CI it
+# prints shell-rc guidance when the install dir isn't already on PATH.
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
@@ -119,14 +123,22 @@ chmod +x "${INSTALL_DIR}/${BIN_NAME}"
 
 printf "\nniro %s installed. Run \`niro init\` to get started.\n" "$VERSION"
 
-case ":${PATH}:" in
-  *":${INSTALL_DIR}:"*) ;;
-  *)
-    warn "${INSTALL_DIR} is not on PATH."
-    printf "    Add to your shell rc (~/.zshrc, ~/.bashrc):\n\n"
-    printf "        export PATH=\"%s:\$PATH\"\n" "$INSTALL_DIR"
-    ;;
-esac
+# On GitHub Actions, expose the install dir to later workflow steps so
+# `niro ci find` / `niro collect ...` resolve without a PATH edit. A no-op
+# off CI (GITHUB_PATH is unset), where we print shell-rc guidance instead.
+if [ -n "${GITHUB_PATH:-}" ]; then
+  printf '%s\n' "$INSTALL_DIR" >> "$GITHUB_PATH" \
+    || warn "could not add ${INSTALL_DIR} to the GitHub Actions PATH."
+else
+  case ":${PATH}:" in
+    *":${INSTALL_DIR}:"*) ;;
+    *)
+      warn "${INSTALL_DIR} is not on PATH."
+      printf "    Add to your shell rc (~/.zshrc, ~/.bashrc):\n\n"
+      printf "        export PATH=\"%s:\$PATH\"\n" "$INSTALL_DIR"
+      ;;
+  esac
+fi
 
 # niro spawns pentests inside containers, so it needs Docker, Podman,
 # or nerdctl on PATH. Non-blocking — install has already succeeded.
