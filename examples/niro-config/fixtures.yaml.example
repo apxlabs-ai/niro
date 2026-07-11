@@ -1,0 +1,115 @@
+# yaml-language-server: $schema=https://niro.apxlabs.ai/schema/v1/fixtures.json
+#
+# REFERENCE + INSTRUCTIONS — do not edit, do not delete.
+#
+# This file is TWO things at once:
+#
+#   1. The format reference for niro/fixtures.yaml.
+#   2. The instructions for how to produce niro/fixtures.yaml on
+#      your machine.
+#
+# Niro does not scaffold niro/fixtures.yaml. The approved `harness/`
+# seed mechanism should generate it while creating or reconciling test state.
+# The generated file is gitignored automatically because fixture references are
+# specific to each environment and run.
+#
+# ---------------------------------------------------------------------
+# What fixtures.yaml is for
+# ---------------------------------------------------------------------
+# fixtures.yaml announces known reference points into the running app's
+# seeded or otherwise known state. The app data itself lives in the
+# app's database, queues, object store, SaaS integrations, etc. This
+# file gives Niro the concrete IDs, URLs, tenant names, provider keys,
+# webhook examples, and other boot-time values it needs to test that
+# state precisely.
+#
+# Vocabulary:
+#
+#   seed    — create or reset state in the app.
+#   fixture — announce reference points for that state to niro.
+#
+# Example pairing:
+#
+#   ./boot/credential-seed.sh  -> niro/credentials.yaml
+#   ./boot/data-seed.sh        -> niro/fixtures.yaml
+#
+# Keep secrets out of fixtures.yaml. Auth material belongs in
+# credentials.yaml.
+#
+# ---------------------------------------------------------------------
+# How to produce niro/fixtures.yaml
+# ---------------------------------------------------------------------
+# Put the chosen pattern in the committed staging preparation or local seed
+# mechanism. Niro re-reads the file on each run that consumes this config.
+#
+#   # One-shot heredoc — quick for local experiments
+#   cat > niro/fixtures.yaml <<'EOF'
+#   fixtures:
+#     - name: environment_uuid
+#       description: "Nango environment UUID for this boot."
+#       value: env_123
+#   EOF
+#
+#   # Generated from a seed script
+#   ./boot/data-seed.sh > niro/fixtures.yaml
+#
+#   # Generated from a database/API lookup after the app boots
+#   ./scripts/render-niro-fixtures.sh > niro/fixtures.yaml
+#
+# Whatever you pick, Niro reads the generated file. Commit the generator
+# script, not fixtures.yaml.
+#
+# ---------------------------------------------------------------------
+# Schema (envelope-only on purpose)
+# ---------------------------------------------------------------------
+# The top-level key is `fixtures`.
+#
+# Each fixture has:
+#
+#   name         — non-empty unique lookup name.
+#   description  — non-empty human explanation of what this reference
+#                  point means and when Niro should use it.
+#   value        — any YAML value. String, number, bool, list, map,
+#                  nested object, or null are all valid. Niro does not
+#                  inspect the shape.
+#
+# The `value` key must exist, but its contents are none of Niro's
+# business. `value: null` is legal and means the producer is announcing
+# a known fixture with no concrete value for this boot.
+#
+# Producer convention: do not accidentally emit null when a database or
+# API lookup failed. If a boot-time lookup returns empty, log loudly,
+# fail the seed script, or omit the fixture. Reserve `value: null` for
+# an intentional "known unset" reference point.
+#
+# ---------------------------------------------------------------------
+# Worked example — the shape your generated fixtures.yaml should take.
+# Copy the structure; fill values from your seed script.
+# ---------------------------------------------------------------------
+fixtures:
+  - name: environment_uuid
+    description: "Environment UUID for this boot. Use when API routes or webhook URLs require an environment identifier."
+    value: env_123
+
+  - name: jira_connection
+    description: "Seeded Jira connection for tenant A. Use these values when testing webhook routing and connection isolation."
+    value:
+      tenant_id: tenant-a
+      provider_config_key: jira-prod
+      connection_id: tenant-a-jira
+      base_url: https://tenant-a.atlassian.net
+
+  - name: jira_webhook_sample
+    description: "Representative Jira issue-created webhook payload for the seeded tenant."
+    value:
+      webhookEvent: jira:issue_created
+      issue:
+        id: "10001"
+        key: DEMO-1
+        fields:
+          project:
+            key: DEMO
+
+  - name: optional_external_account
+    description: "Known optional external account. Intentionally unset in this boot."
+    value: null

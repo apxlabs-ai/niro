@@ -1,0 +1,37 @@
+# accepted-coverage-gaps.yaml — what cannot be tested in this setup, and why.
+#
+# Every entry is a coverage gap treated as ACCEPTED: as long as an entry exists,
+# the tool will not re-report that gap on every run. To stop accepting one (it
+# became testable — you added the credential, enabled the flag, wired the
+# service), delete it. Version control records who changed what, and when.
+#
+#   gap:     what cannot be exercised here — the specific surface or capability
+#            left untested. (max 1000 runes)
+#   reason:  why it is structurally untestable in THIS setup — prod-only behavior,
+#            external infra/secrets you don't have, a licensed build you can't
+#            produce. Be specific enough that a reviewer can challenge it.
+#
+# Only genuinely unfixable gaps belong here. A gap you could close by adding a
+# fixture, credential, or flag is work to do — not a gap to accept. Broad entries
+# hide real blind spots.
+#
+# This file accumulates across runs and is APPEND-ONLY. Anyone updating it — tool
+# or human — must read it first, keep every existing entry, and only append;
+# never rewrite, reorder, or drop entries. There is no generator for it (it is
+# authored judgment, not derived data), so a clobbered entry is gone for good.
+# COMMIT it to git — that is your history, your review trail, and your undo.
+#
+# Create `accepted-coverage-gaps.yaml` next to this file, carrying this header
+# into it so its rules travel with the data.
+
+accepted_coverage_gaps:
+  - gap: "SSO login enforcement"
+    reason: "Local and staging use password login; the SSO provider isn't wired here, so enforcement can't be exercised."
+  - gap: "Payment callback replay"
+    reason: "Staging provides no signed historical callbacks from the payment provider, so replay can't be reproduced."
+  - gap: "Final inbox email delivery"
+    reason: "The test environment captures outbound email metadata but not real inbox delivery events."
+
+# Too broad — these hide real blind spots:
+#   - gap: "Admin coverage"
+#   - gap: "Anything needing credentials"

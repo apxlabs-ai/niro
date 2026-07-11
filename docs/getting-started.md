@@ -68,7 +68,11 @@ niro fix --agent=copilot --goal "Test the login and session flows"
 ```
 
 Niro initializes the project automatically. You do not need to run `niro init`
-before `niro find` or `niro fix`.
+before `niro find` or `niro fix` when Niro will start the application. To test
+an existing runtime, pass its exact URL with `--url`; Niro will not start, stop,
+rebuild, or redeploy it. The destination must be authorized before testing, so
+create its named environment profile first. See [Prepare your
+app](prepare-your-app.md#test-an-existing-staging-application).
 
 Use a report-only run when you do not want Niro to create fix branches or pull
 requests:

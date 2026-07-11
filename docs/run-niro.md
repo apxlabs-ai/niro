@@ -2,7 +2,10 @@
 
 Run Niro from the root of the Git repository you want to test. Choose the
 outcome you want, the application surface to test, and the agent to use. The
-turnkey `find` and `fix` commands initialize Niro automatically.
+turnkey `find` and `fix` commands initialize Niro automatically when they start
+the application. For an existing runtime, create and authorize its named
+environment profile, then pass its exact URL. See [Prepare your
+app](prepare-your-app.md#test-an-existing-staging-application).
 
 ## Choose an outcome
 
@@ -13,6 +16,21 @@ turnkey `find` and `fix` commands initialize Niro automatically.
 
 Use `find` when you want evidence without remediation changes. Use `fix` when
 you want Niro to carry confirmed findings through remediation and verification.
+
+## Choose where the application runs
+
+| Runtime | Command contract | Niro does |
+| --- | --- | --- |
+| Existing runtime | Pass `--url=https://staging.example.com` | Uses that exact URL and never starts, stops, rebuilds, or redeploys the application |
+| Current checkout | Omit `--url` | Prepares, starts, seeds, resets, and stops the application |
+
+`--url` selects the runtime; it does not grant authorization. Its host and port
+must already be allowed by the `scope.yaml` in the selected configuration
+directory. A URL can be combined with any goal, commit-range, or pull-request
+scope. For a commit-range or pull-request run, the existing runtime must serve
+the selected head revision. Niro requires deployment evidence before attributing
+runtime findings to that diff; use a Niro-managed runtime when the deployed
+revision cannot be verified.
 
 ## Choose what to test
 

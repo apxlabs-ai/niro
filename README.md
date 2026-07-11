@@ -62,7 +62,7 @@ That's it. `niro fix` runs the end-to-end workflow and opens review-ready fix
 PRs. You decide what to merge.
 
 See [Run Niro](docs/run-niro.md) for report-only and scoped runs, supported
-coding agents, CI, and agent-native workflows.
+agents, CI, and agent-native workflows.
 
 ## What a run actually does
 

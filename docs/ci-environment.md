@@ -5,16 +5,15 @@ workflows.
 
 ## Model selection
 
-Niro does not set the coding agent's model — use the agent's own mechanism:
+Niro does not set the selected agent's model — use the agent's own mechanism:
 `COPILOT_MODEL` for Copilot, `ANTHROPIC_MODEL` for Claude, or Codex's config.
 
-The **pentest reasoners'** (Tactician, Vector, Counsel) models are pinned per
-tier in `niro.yaml`'s `models:` block. For Claude and Codex that is fully
-independent of the coding agent's model. **Copilot is the exception:** a BYOK
-provider serves a single model, so `COPILOT_MODEL` doubles as the reasoners'
-default — it sets the coding agent's model *and* every reasoner tier that
-`niro.yaml` does not pin. To run the reasoners on a different model than the
-Copilot CLI, pin `models.high` / `models.medium` / `models.low` in `niro.yaml`.
+Niro's task-specific model tiers are pinned in `niro.yaml`'s `models:` block.
+For Claude and Codex, those tiers are independent of the selected agent's model.
+**Copilot is the exception:** a BYOK provider serves a single model, so
+`COPILOT_MODEL` also becomes the default for every tier that `niro.yaml` does
+not pin. To use different models, pin `models.high`, `models.medium`, and
+`models.low` in `niro.yaml`.
 
 ## Agent Authentication
 
@@ -132,6 +131,11 @@ Pass the same secrets your application needs to boot and run tests in CI. These
 are only needed when the Niro job starts the app or test harness locally. If
 Niro is testing an already-running staging or production target, authorize that
 target in Niro scope instead of copying those runtime secrets into CI.
+
+For an existing staging target, expose only the secrets required by the
+approved `harness/seed.sh` or `seed.ps1` preparation. That operation generates
+the gitignored Niro credentials and fixtures used by the run. See
+[Prepare your app](prepare-your-app.md#test-an-existing-staging-application).
 
 These are your app's normal runtime secrets, not Niro credentials.
 

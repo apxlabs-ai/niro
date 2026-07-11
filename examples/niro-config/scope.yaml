@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://niro.apxlabs.ai/schema/v1/scope.json
+#
+# The network destinations Niro is authorized to test. Anything not listed is
+# denied by the attack sandbox's network policy.
+#
+# Use one Niro config per environment. Keeping local, staging, and production
+# targets in separate config directories prevents a run from selecting the
+# wrong environment. For example, keep `niro/` and `niro-staging/` separate and
+# select an existing runtime with
+# `niro find --config-dir=niro-staging --url=https://staging.example.com`.
+# The URL selects the runtime; this file authorizes its host and port.
+#
+# Target syntax:
+#   api.staging.example.com:443        Exact host and port.
+#   api.staging.example.com:80,443     Multiple ports.
+#   api.staging.example.com:8000-8999  Port range.
+#   *.staging.example.com:443          One-level subdomain wildcard.
+#   10.0.42.0/24:443                   IPv4 CIDR.
+#   [2001:db8::/32]:443                IPv6 CIDR.
+#
+# Exclusions take precedence over allowed entries:
+# targets:
+#   - target: "*.staging.example.com:443"
+#   - target: "billing.staging.example.com:443"
+#     excluded: true
+#
+# Targets must be reachable from the Docker or Podman container. Niro maps
+# localhost and 127.0.0.1 to the host so locally running apps remain reachable.
+#
+# Email access is optional. Enable it only when a test must receive a signup,
+# password-reset, or one-time-code email. This permits access to Niro's mail
+# service; it does not add the mail service as a pentest target.
+# allow_email_access: true
+
+targets: []

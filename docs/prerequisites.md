@@ -5,7 +5,7 @@ command fails, that's what you need to install:
 
 ```bash
 docker --version || podman --version               # container runtime (the sandbox)
-claude --version                                   # coding agent (or: codex / copilot)
+claude --version                                   # agent (or: codex / copilot)
 git --version                                      # version-control foundation
 gh --version || az --version || glab --version     # your Git provider's CLI
 ```
@@ -20,7 +20,7 @@ the cage.
 - **macOS / Windows:** [Docker Desktop](https://docs.docker.com/get-started/get-docker/)
 - **Linux:** [Docker Engine](https://docs.docker.com/get-started/get-docker/) or [Podman](https://podman.io/docs/installation)
 
-## A coding agent
+## An agent
 
 This is the reasoning engine Niro drives to play both roles — the attacker that
 exploits, and the developer that fixes. Install the one you use and sign it in;
