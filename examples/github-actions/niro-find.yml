@@ -16,15 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 300
 
-    env:
-      # To use Codex, Copilot, or other CI settings, see:
-      # https://github.com/apxlabs-ai/niro/blob/main/docs/ci-environment.md
-      NIRO_AGENT: claude
-      NIRO_CONFIG_DIR: niro
-      NIRO_GOAL: "Pentest this application"
-      NIRO_CI_ARTIFACT_INCLUDE_FINDINGS: "true"
-      NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS: "false"
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -35,18 +26,20 @@ jobs:
         shell: bash
         run: curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
 
+      # This workflow uses Claude Code. To use Codex or Copilot CLI instead:
+      # https://github.com/apxlabs-ai/niro/blob/main/docs/supported-agents.md#authenticate-in-ci
       - name: Run Niro
         shell: bash
         env:
-          CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPEN_ROUTER_API_KEY: ${{ secrets.OPEN_ROUTER_API_KEY }}
-          COPILOT_PROVIDER_BASE_URL: https://openrouter.ai/api/v1
-          COPILOT_PROVIDER_TYPE: openai
-          COPILOT_MODEL: z-ai/glm-5.2
-        run: niro ci find
+        run: |
+          niro find \
+            --agent=claude \
+            --goal="Pentest this application" \
+            --config-dir=niro \
+            --include-findings=true \
+            --upload-debug-logs=false
 
       - name: Upload Niro knowledge
         if: always()
@@ -57,8 +50,9 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+      # Change --upload-debug-logs to true above to produce this unsafe bundle.
       - name: Upload debug logs
-        if: always() && contains(fromJSON('["true","TRUE","1","yes","YES","on","ON"]'), env.NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS)
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: niro-debug-logs-unsafe

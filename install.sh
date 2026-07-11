@@ -124,7 +124,7 @@ chmod +x "${INSTALL_DIR}/${BIN_NAME}"
 printf "\nniro %s installed. Run \`niro init\` to get started.\n" "$VERSION"
 
 # On GitHub Actions, expose the install dir to later workflow steps so
-# `niro ci find` / `niro collect ...` resolve without a PATH edit. A no-op
+# `niro find` / `niro collect ...` resolve without a PATH edit. A no-op
 # off CI (GITHUB_PATH is unset), where we print shell-rc guidance instead.
 if [ -n "${GITHUB_PATH:-}" ]; then
   printf '%s\n' "$INSTALL_DIR" >> "$GITHUB_PATH" \

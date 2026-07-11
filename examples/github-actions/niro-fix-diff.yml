@@ -1,7 +1,16 @@
-name: Niro Fix
+name: Niro Fix (diff)
 
+# Pentest what changed in a push (base..head) and open review-ready fix PRs.
+# Like the whole-app fix workflow it needs the GitHub App (fresh push/PR
+# tokens); only the scope differs.
+# Scope to your default/source branch. Do NOT leave this unfiltered: Niro pushes
+# remediation branches with the App token, and App/PAT pushes are NOT exempt from
+# re-triggering workflows the way GITHUB_TOKEN pushes are — an all-branches
+# trigger would recurse on Niro's own branches. (Add an actor guard for the App
+# bot too if you want belt-and-suspenders.)
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
 
 permissions:
   contents: write
@@ -10,12 +19,15 @@ permissions:
   statuses: write
 
 concurrency:
-  group: niro-fix-${{ github.ref }}
+  group: niro-fix-diff-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   fix:
-    name: Pentest and open fix PRs
+    name: Pentest the push diff and open fix PRs
+    # Skip pushes with no base to diff against — the first push of a branch and
+    # tag pushes set github.event.before to the all-zero SHA.
+    if: github.event.before != '0000000000000000000000000000000000000000'
     runs-on: ubuntu-latest
     timeout-minutes: 300
 
@@ -23,8 +35,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v6
         with:
-          # Niro pushes and opens PRs with a fresh GitHub App token, so the
-          # checkout must not leave its own credential behind for git to use.
+          # Full history so Niro can diff base..head; no persisted credential —
+          # Niro pushes and opens PRs with a fresh GitHub App token.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Install Niro
@@ -40,10 +53,13 @@ jobs:
           NIRO_APP_PRIVATE_KEY: ${{ secrets.NIRO_APP_PRIVATE_KEY }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        # github.event.before is the prior branch head (all-zeros on a brand-new
+        # branch — guard or pin a base there).
         run: |
           niro fix \
+            --base-sha="${{ github.event.before }}" \
+            --head-sha="${{ github.sha }}" \
             --agent=claude \
-            --goal="Pentest this application" \
             --config-dir=niro \
             --include-findings=true \
             --upload-debug-logs=false

@@ -3,25 +3,30 @@
 This page documents the environment variables and secrets used by Niro CI
 workflows.
 
-## Configuration
+## Model selection
 
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `NIRO_AGENT` | No | `claude` | Selects the agent Niro uses for the run. Supported values: `claude`, `codex`, and `copilot`. |
-| `NIRO_CONFIG_DIR` | No | `niro` | Selects the Niro config directory under the project root. If it does not exist, the workflow initializes it. Set this when a repo keeps Niro config somewhere other than `niro/`, such as `niro-staging/` or `niro-prod/`. |
-| `NIRO_GOAL` | Yes | - | Describes what Niro should do, such as `Pentest this app` or `Pentest and create PRs`. |
-| `NIRO_MODEL` | No | agent default | Overrides the model used by the selected agent. Leave unset to use that agent's default model. |
-| `NIRO_PROGRESS_FILE` | No | unset | When set, Niro creates the parent directory if needed and appends progress events as JSONL with `ts` and `message` fields, then streams them to the job log. |
-| `NIRO_CI_ARTIFACT_INCLUDE_FINDINGS` | No | `true` | Controls whether Niro finding proof bundles are included in the CI artifact. Set to `false`, `0`, `no`, or `off` to exclude them. |
-| `NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS` | No | `false` | Controls whether debug logs are uploaded as a CI artifact. Debug logs may contain secrets, captured tokens, and live request/response data. |
+Niro does not set the coding agent's model — use the agent's own mechanism:
+`COPILOT_MODEL` for Copilot, `ANTHROPIC_MODEL` for Claude, or Codex's config.
+
+The **pentest reasoners'** (Tactician, Vector, Counsel) models are pinned per
+tier in `niro.yaml`'s `models:` block. For Claude and Codex that is fully
+independent of the coding agent's model. **Copilot is the exception:** a BYOK
+provider serves a single model, so `COPILOT_MODEL` doubles as the reasoners'
+default — it sets the coding agent's model *and* every reasoner tier that
+`niro.yaml` does not pin. To run the reasoners on a different model than the
+Copilot CLI, pin `models.high` / `models.medium` / `models.low` in `niro.yaml`.
 
 ## Agent Authentication
 
-Add the secret for the agent selected by `NIRO_AGENT`.
+Add the secret for the agent you run (`--agent`, default `claude`).
 
 ### GitHub Pull Requests
 
-Only needed for workflows that create fix PRs (`niro-fix.yml`).
+Only needed for workflows that **create fix PRs** (`niro-fix.yml`,
+`niro-fix-diff.yml`). PR-scoped find (`niro-find-pr.yml`) only reads the PR and
+posts a comment, which it does with the workflow's built-in `GITHUB_TOKEN`
+(grant `contents: read` + `pull-requests` / `statuses: write` — a `permissions:`
+block defaults every unlisted scope to `none`) — no App required.
 
 Niro authenticates to GitHub through a GitHub App rather than a personal
 access token, so authentication does not expire during a long fix run. Create
@@ -107,17 +112,19 @@ base64 < ~/.codex/auth.json | tr -d '\n'
 
 ### Copilot
 
-The GitHub Actions examples use OpenRouter as the Copilot model provider.
+Copilot runs against any OpenAI-compatible model provider — OpenRouter,
+Groq, Together, Fireworks, or a self-hosted gateway. Point it at the provider
+of your choice with these variables; the example values use OpenRouter.
 
-| Variable | Value |
-| --- | --- |
-| `COPILOT_PROVIDER_BASE_URL` | `https://openrouter.ai/api/v1` |
-| `COPILOT_PROVIDER_TYPE` | `openai` |
-| `COPILOT_MODEL` | OpenRouter model name, such as `z-ai/glm-5.2` |
+| Variable | Purpose | Example |
+| --- | --- | --- |
+| `COPILOT_PROVIDER_BASE_URL` | The provider's OpenAI-compatible API base URL. | `https://openrouter.ai/api/v1` |
+| `COPILOT_PROVIDER_TYPE` | The API dialect — `openai` for OpenAI-compatible endpoints. | `openai` |
+| `COPILOT_MODEL` | The model to use, in the provider's own naming. | `z-ai/glm-5.2` |
 
 | Secret | Purpose |
 | --- | --- |
-| `OPEN_ROUTER_API_KEY` | Authenticates Copilot CLI with OpenRouter. |
+| `COPILOT_PROVIDER_API_KEY` | API key for your chosen provider (e.g. an OpenRouter key). |
 
 ## Application Secrets
 

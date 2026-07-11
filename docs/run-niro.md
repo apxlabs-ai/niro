@@ -1,174 +1,154 @@
 # Run Niro
 
-Niro has two independent choices:
+Run Niro from the root of the Git repository you want to test. Choose the
+outcome you want, the application surface to test, and the agent to use. The
+turnkey `find` and `fix` commands initialize Niro automatically.
 
-- **Where it runs:** local or CI.
-- **What it tests:** whole app, focused scope, or pull request.
+## Choose an outcome
 
-## Before You Install
+| Command | What it does | Code changes |
+| --- | --- | --- |
+| `niro find` | Pentests the selected scope and reports proven findings | Does not create branches, commits, or fix pull requests |
+| `niro fix` | Pentests, prepares fixes and regression tests, and delivers reviewable changes | Can create branches, commits, pull requests, or patch artifacts; never merges |
 
-For local use, Niro orchestrates tools you already use. You'll need:
+Use `find` when you want evidence without remediation changes. Use `fix` when
+you want Niro to carry confirmed findings through remediation and verification.
 
-- **Container runtime**
-  - [Docker](https://docs.docker.com/get-started/get-docker/)
-  - [Podman](https://podman.io/docs/installation)
-- **Git**
-  - [Git downloads](https://git-scm.com/downloads)
-- **Code host CLI**
-  - [GitHub CLI](https://cli.github.com/)
-  - [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
-- **Supported coding agent**
-  - [Claude Code](https://code.claude.com/docs/en/overview)
-  - [OpenAI Codex](https://developers.openai.com/codex/cli)
-  - [GitHub Copilot](https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli)
+## Choose what to test
 
-Need GitLab, Cursor, or another environment? Open an
-[issue](https://github.com/apxlabs-ai/niro/issues).
+| Scope | Example | Use it for |
+| --- | --- | --- |
+| Whole application | `niro fix` | A complete assessment of the configured application |
+| Focused goal | `niro fix --goal "Test account recovery"` | A feature, workflow, or security concern |
+| Commit range | `niro fix --base-sha origin/main --head-sha HEAD` | Changes between two Git revisions |
+| Pull request or merge request | `niro find --pr-number 42` | Reviewing an existing change without modifying its branch |
 
-## Install
+Scope selectors are mutually exclusive. A pull-request or merge-request scope
+is report-only and is supported by `find`, not `fix`. Use a commit range with
+`fix` when you want separate remediation changes for an existing diff.
 
-**macOS, Linux:**
+A local command without a scope tests the whole application. Whole-application
+runs can take a few hours; a goal, range, or pull-request scope is usually the
+faster feedback loop.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
-```
+## Choose an agent
 
-**Windows PowerShell:**
-
-```powershell
-irm https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.ps1 | iex
-```
-
-For security-conscious environments, download and inspect the
-[install script](https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh)
-before running it, or install from the
-[Releases page](https://github.com/apxlabs-ai/niro/releases).
-
-## Initialize A Repo
-
-From the root of your repo:
+Claude Code is the default. Select another installed agent per command:
 
 ```bash
-niro init
+niro find --agent=codex --goal "Test account recovery"
+niro fix --agent=copilot --goal "Test account recovery"
 ```
 
-This scaffolds a `niro/` directory and wires Niro into your coding agent as an
-MCP server. Commit the generated project setup so the team shares the same
-configuration.
+| Agent | Flag |
+| --- | --- |
+| Claude Code | Omit `--agent` |
+| OpenAI Codex | `--agent=codex` |
+| GitHub Copilot CLI | `--agent=copilot` |
 
-## Trust Boundaries
+Agent authentication and model selection remain under that agent's normal
+configuration. See [Supported agents](supported-agents.md) and
+[Model selection](model-selection.md).
 
-Niro runs in your local or CI environment. App traffic, credentials, test
-state, and generated artifacts stay there unless your workflow explicitly
-uploads or commits them.
+## Run locally
 
-Niro uses the AI provider account configured through your coding agent. That
-provider may receive the context needed for reasoning, such as relevant code
-snippets, command output, errors, HTTP observations, and remediation context.
-Review your provider's data-retention and training terms before using Niro with
-sensitive systems.
-
-Niro does not require uploading your repository, credentials, findings, or logs
-to a Niro backend to complete a local or CI run.
-
-## Local Runs
-
-Use local mode when a developer wants Niro available from their existing coding
-agent workflow.
-
-Local runs are useful when you want to:
-
-- bring up the app from your working tree;
-- inspect the harness Niro creates;
-- tune scope, fixtures, credentials, and accepted behavior;
-- review PR branches before pushing or merging.
-
-### Goal-Based Run
-
-Ask your coding agent to run a whole-app pentest or target a focused area:
+Start with a focused report-only run when you want to validate the application
+setup and agent authentication before allowing remediation changes:
 
 ```bash
-claude "Pentest this application and create PRs."
-codex exec "Pentest the billing API and create PRs."
+niro find --goal "Test authentication and session handling"
 ```
 
-### PR Run
-
-Use a PR run when you want Niro to test changes before they merge:
+Run the same scope in fix mode when the Git provider is authenticated and you
+are ready to review generated changes:
 
 ```bash
-claude "Pentest the current pull request."
-codex exec "Pentest the current pull request."
+niro fix --goal "Test authentication and session handling"
 ```
 
-## CI Runs
+`fix` requires a Git remote and an authenticated provider CLI. Niro uses your
+existing `gh`, `glab`, or `az` authentication and never merges generated
+changes.
 
-Use CI mode when you want a repeatable workflow that can pentest the app and
-open fix PRs without a developer sitting at the keyboard.
+Local runs keep their results in your environment. Depending on the outcome,
+the workspace can contain `niro-summary.md`, `niro-knowledge.tar`, and optional
+debug bundles. `fix` can also create remote branches and pull requests. See
+[Review the results](review-results.md) for the review workflow.
 
-Run Niro directly on the CI runner VM: `niro ci find` pentests the app and
-reports findings, and `niro ci fix` also opens review-ready fix PRs. Docker
-remains a host prerequisite, just like local runs.
+To invoke Niro from inside an interactive agent session instead of using the
+turnkey commands, follow [Run Niro from an interactive agent
+session](supported-agents.md#run-niro-from-an-interactive-agent-session).
 
-### Full Or Focused Run
+## Run in CI
 
-There are two GitHub Actions examples, matching **find → trust → fix**:
+CI uses the same `niro find` and `niro fix` commands as a local run. The runner
+needs a container runtime, noninteractive agent authentication, the application
+dependencies, and any Git-provider permissions required by the chosen outcome.
 
-- [`niro-find.yml`](../examples/github-actions/niro-find.yml) — read-only. Pentests
-  the app and reports the findings without touching your repo (`contents: read`,
-  no tokens, no setup). Start here.
-- [`niro-fix.yml`](../examples/github-actions/niro-fix.yml) — pentests the app and
-  opens review-ready fix PRs. Needs write permissions; see the note by its
-  `permissions:` block about enabling PR creation.
+### GitHub Actions
 
-### PR Run
+| Trigger and scope | Find | Fix |
+| --- | --- | --- |
+| Manual whole-application run | [`niro-find.yml`](../examples/github-actions/niro-find.yml) | [`niro-fix.yml`](../examples/github-actions/niro-fix.yml) |
+| Push or commit range | [`niro-find-diff.yml`](../examples/github-actions/niro-find-diff.yml) | [`niro-fix-diff.yml`](../examples/github-actions/niro-fix-diff.yml) |
+| Pull request | [`niro-find-pr.yml`](../examples/github-actions/niro-find-pr.yml) | Use the find workflow |
 
-CI PR-run support is coming soon.
+Whole-application and range-based `find` runs publish their report to the job
+summary. The pull-request workflow posts a comment and status using the
+built-in `GITHUB_TOKEN`. `fix` needs GitHub App credentials because it pushes
+branches and opens new pull requests.
 
-## Runtime And Cost
+### GitLab CI/CD
 
-Runtime and cost depend on app size, setup, scope, model choice, and
-concurrency. Small focused runs can finish in minutes; whole-app pentest-to-PR
-runs often take 2-6 hours, depending on app size and setup.
+| Trigger and scope | Find | Fix |
+| --- | --- | --- |
+| Manual whole-application run | [`niro-find.yml`](../examples/gitlab-ci/niro-find.yml) | [`niro-fix.yml`](../examples/gitlab-ci/niro-fix.yml) |
+| Push or commit range | [`niro-find-diff.yml`](../examples/gitlab-ci/niro-find-diff.yml) | [`niro-fix-diff.yml`](../examples/gitlab-ci/niro-fix-diff.yml) |
+| Merge request | [`niro-find-pr.yml`](../examples/gitlab-ci/niro-find-pr.yml) | Use the find workflow |
 
-Use `niro.yaml` to control time, cost, and concurrency:
+GitLab `find` can report on merge requests, and `fix` opens review-ready merge
+requests through `glab`.
+
+The ready-to-copy templates cover GitHub Actions and GitLab CI/CD. You can run
+the same CLI commands in another CI system and configure that workflow's
+checkout, secrets, container runtime, and artifact publication directly.
+
+See [CI environment](ci-environment.md) for agent secrets and provider-specific
+environment variables.
+
+## Control runtime and cost
+
+Runtime and model cost depend on application size, setup, scope, model choice,
+and concurrency. Configure limits in `niro/niro.yaml`:
 
 ```yaml
 limits:
-  max_budget_usd: 15
+  max_budget_usd: 25
   max_duration_minutes: 120
   max_concurrency: 4
 ```
 
-## Configuration
+- `max_budget_usd` limits model spend for the run.
+- `max_duration_minutes` limits total wall-clock time.
+- `max_concurrency` controls how many test cases can execute concurrently.
 
-For harness, scope, credentials, fixtures, accepted behavior, and coverage-gap
-handling, see [Pentesting Without The Setup Tax](pentesting-without-the-setup-tax.md).
+A tight limit can stop a run before it reaches useful coverage. Prefer a
+focused scope when you need a short run rather than applying an unrealistically
+small whole-application budget.
 
-For CI environment variables and secrets, see
-[CI Environment](ci-environment.md).
+## Stop a run
 
-## FAQ
+Interrupt the local command or cancel the CI job. Findings, branches, pull
+requests, and artifacts already written remain available for review. If the
+process was terminated before cleanup completed, remove any remaining Niro
+container through Docker or Podman.
 
-### What is MCP?
+## Next steps
 
-[Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro)
-is an open standard that lets AI applications connect to external tools and
-systems. After `niro init`, your coding agent can call Niro through MCP to
-scope, test, verify, and remediate the application from the current repo.
-
-### Does Niro replace a compliance pentest?
-
-No. Niro is designed for continuous pentest-to-fix work during development and
-CI. It helps reduce risk before formal audits or third-party pentests, but does
-not by itself replace auditor-required testing.
-
-### Will Niro upload logs or artifacts?
-
-No, not by default. Local runs keep artifacts on your machine. CI workflows only
-upload artifacts if the workflow is configured to do so.
-
-### Can I stop a long run?
-
-Yes. Stop the coding-agent process from your terminal or cancel the CI job. Any
-opened PRs, committed branches, or written artifacts remain for review.
+- [Prepare your app](prepare-your-app.md) for targets, scope, credentials, and
+  test state.
+- [Review the results](review-results.md) for findings, proofs, regression
+  tests, and remediation changes.
+- [CLI and configuration reference](cli-and-config-reference.md) for every
+  command, flag, and configuration field.
+- [Troubleshooting](troubleshooting.md) for startup failures and diagnostics.

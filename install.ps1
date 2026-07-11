@@ -97,7 +97,7 @@ try {
     Write-Host "niro $version installed. Run ``niro init`` to get started."
 
     # On GitHub Actions, expose the install dir to later workflow steps so
-    # `niro ci find` / `niro collect ...` resolve without a PATH edit. Off CI
+    # `niro find` / `niro collect ...` resolve without a PATH edit. Off CI
     # ($env:GITHUB_PATH is unset), persist to the user PATH instead.
     if ($env:GITHUB_PATH) {
         Add-Content -Path $env:GITHUB_PATH -Value $InstallDir

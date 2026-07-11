@@ -1,0 +1,47 @@
+# Niro Find - pentest the application and report findings.
+#
+# Copy this file to `.gitlab-ci.yml` at your project root (or `include:` it).
+# This template uses Claude Code. To use Codex or Copilot CLI instead, see:
+# https://github.com/apxlabs-ai/niro/blob/main/docs/supported-agents.md#authenticate-in-ci
+#
+# Configure either ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN as a masked
+# CI/CD variable.
+
+stages:
+  - security
+
+niro-find:
+  stage: security
+  image: ubuntu:24.04
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_CERT_PATH: "/certs/client"
+    DOCKER_TLS_VERIFY: "1"
+    NIRO_CONFIG_DIR: niro
+    NIRO_GOAL: "Pentest this application"
+    NIRO_CI_ARTIFACT_INCLUDE_FINDINGS: "true"
+    NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS: "false"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends nodejs npm git curl ca-certificates docker.io
+    - curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
+  script:
+    - |
+      niro find \
+        --goal="$NIRO_GOAL" \
+        --agent=claude \
+        --config-dir="$NIRO_CONFIG_DIR" \
+        --include-findings="$NIRO_CI_ARTIFACT_INCLUDE_FINDINGS" \
+        --upload-debug-logs="$NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS"
+  artifacts:
+    when: always
+    paths:
+      - niro-summary.md
+      - niro-knowledge.tar
+      - niro-debug-logs.tar
+    expire_in: 30 days

@@ -7,102 +7,117 @@
 
 # Niro Community Edition
 
-> Security that keeps up with your developers.
+> Finds the security bug. Ships the fix.
 
-Niro Community Edition pentests your running application and opens
-review-ready fix PRs with security regression tests, so security fixes land as
-normal pull requests.
+Niro works like an autonomous, two-person team living in your repo — two roles
+with one goal: real security bugs, found and closed with proof.
 
-Today, a pentest starts with a handoff: prepare a runtime, define scope, gather
-credentials and fixtures, wait for findings, triage them, reproduce them, write
-tests, and make the fix. By the time it becomes merged code, weeks or months
-can pass and several people have touched the work.
+Niro sets the stage first — it stands up your app (or points at a target you
+provide), seeds test state, and creates the users and data an attacker needs, so
+you skip most of the environment setup. Then the two-person team goes to work:
 
-Meanwhile, the codebase has already moved on. AI coding tools make that gap
-wider: teams are shipping more code than security can review.
+- **The attacker** hits your running app like a real adversary — finds
+  exploitable bugs, proves each with a working exploit, re-tests after a fix.
+  Never changes your code.
+- **The developer** patches the bugs it can safely fix and adds a regression
+  test for each fix — so every PR arrives with evidence it works, not just a
+  claim. Never merges — you do.
 
-## Why Now
+Most security tools hand you a backlog of maybes and walk away. Niro doesn't stop
+at proven findings — in fix mode it turns each into a focused **pull request**.
+You review the diffs and decide what ships.
 
-AI has made code faster to ship and harder to trust.
+## From a three-team relay to one run
 
-| Signal | What it means |
-| --- | --- |
-| 85% say AI has shifted the bottleneck from writing code to reviewing and validating it [[1]](#references) | Speed is no longer the hard part. Trust is. |
-| 90% of security leaders report concern about AI-generated software risk [[2]](#references) | AI-written code is now a security governance problem, not just a developer productivity story. |
+Fixing a security bug is a **relay across three teams** — today's tools each
+cover one slice, so people stitch the rest together:
 
-## Why Niro
+1. **Set up** the test environment — *engineering.*
+2. **Attack** the app to find and exploit the bugs — *security.*
+3. **Triage and fix** every finding — *developers.*
 
-Niro collapses app setup, pentesting, and fixing into one repo-native loop.
-Instead of handoffs across several people, Niro brings up the app, tests it,
-and opens PRs that fix security issues with security regression tests. Work
-that can take weeks or months and touch several people can start landing in
-hours.
+A **program manager** chases the handoffs, and it's never one clean pass. The
+pentester needs another test tenant, back to eng. A finding won't reproduce, it
+ping-pongs between security and dev. A fix ships, security has to re-test. Weeks
+pass, a dozen people touch it, and the code has already moved on.
 
-## What Niro Does
-
-- **Builds the harness:** creates the scripts and config needed to start the
-  app, seed credentials and data fixtures, and make the target testable across
-  languages, frameworks, and databases.
-- **Probes HTTP attack surfaces:** exercises APIs, web flows, MCP servers, and
-  other HTTP endpoints against OWASP Top 10-style risks inside your scope.
-- **Adapts when others stop:** when testing hits missing users, tenants, data,
-  credentials, routes, or feature state, Niro updates the harness, builds the
-  state it needs, and avoids silent coverage gaps.
-- **Turns confirmed issues into focused PRs:** groups related issues by root
-  cause, adds security regression tests, patches code, and opens review-ready
-  PRs.
-- **Runs where your code runs:** locally or in CI, using your environment and
-  your credentials.
-
-## Trust And Control
-
-- **Data privacy:** app traffic, credentials, and test state stay in your
-  environment; AI reasoning uses the provider account you configure.
-- **Agent containment:** Niro applies kernel-level egress controls from
-  `scope.yaml`, so the pentest engine can only reach approved targets.
-- **Alert fatigue:** Niro checks code, tests, config, prior accepted behavior,
-  and existing PRs before opening a PR. Clear bugs become fix PRs;
-  intentional or ambiguous behavior is recorded for your review.
-- **Runaway cost:** customize `niro.yaml` to control time, cost, and
-  concurrency.
-- **Telemetry control:** usage telemetry is documented in
-  [TELEMETRY.md](TELEMETRY.md) and can be disabled in `niro.yaml`.
-
-Need governance, audit, compliance controls, or enterprise deployment support?
-Talk to APX Labs about Niro Enterprise.
+**Niro collapses that relay into one autonomous run.** Its **attacker** does the
+security team's job, its **developer** does the dev team's — and it *automates
+the setup* engineering used to own. You still set the scope, review the diffs,
+and decide what merges; Niro handles the back-and-forth in between — so three
+teams' effort lands in a few hours as review-ready pull requests, grouped by root
+cause so each is small enough to actually review.
 
 ## Quickstart
 
-Pentest an application from your machine:
+From your project root, [check the prerequisites](docs/prerequisites.md), then
+install Niro and start a fix run:
 
 ```bash
-git clone https://github.com/<your-org>/<your-repo>.git
-cd <your-repo>
 curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
-niro init
-claude "Pentest this application and create PRs."
+niro fix
 ```
 
-See [Run Niro](docs/run-niro.md) for Windows installation, prerequisites, CI,
-and other coding-agent examples.
+That's it. `niro fix` runs the end-to-end workflow and opens review-ready fix
+PRs. You decide what to merge.
 
-## Ways To Run Niro
+See [Run Niro](docs/run-niro.md) for report-only and scoped runs, supported
+coding agents, CI, and agent-native workflows.
 
-Niro runs locally or in CI, and can target a whole app, a focused scope, or a
-pull request.
+## What a run actually does
 
-- **Local:** run from a developer machine when you want interactive control.
-- **CI:** run from a workflow when you want repeatable pentest-to-PR automation.
-- **Whole app or focused scope:** test the application area you choose.
-- **Pull request:** test changes before they merge.
+Setup done, Niro works your running app the way a real attacker would — and
+doesn't stop until each bug is proven:
 
-See [Pentesting Without The Setup Tax](docs/pentesting-without-the-setup-tax.md)
-for harness, fixtures, and setup-gap handling.
+1. **Attack** — probes your HTTP surfaces (web apps, APIs, MCP servers) for real,
+   exploitable bugs.
+2. **Unblock** — when a login, empty database, disabled feature, or missing tenant
+   blocks testing, Niro creates what it needs to keep going instead of silently
+   skipping that part of the app.
+3. **Prove** — every finding is a false alarm until Niro reproduces it and writes
+   a test that fails on the bug. Doubt is demoted, never inflated.
 
-## References
+Proven bugs are grouped by root cause into focused, review-ready PRs — one per
+cause, each with its own regression test.
 
-1. [ITPro on GitLab's AI code governance report](https://www.itpro.com/software/development/enterprises-are-shipping-so-much-ai-generated-code-they-cant-control-or-secure-it)
-2. [TechRadar on Salt Security's AI code risk research](https://www.techradar.com/pro/security/nearly-all-security-bosses-are-worried-about-ai-safety-with-a-third-saying-they-still-rely-on-manually-reviewing-code-before-launch)
+## Built for trust
+
+AI makes code faster to ship and harder to trust. Niro is built to earn that
+trust back:
+
+- **Your environment, your provider.** Niro does not proxy model requests or
+  require uploading your repository, credentials, findings, or logs to a Niro
+  backend. See [Security and data](docs/security-and-data.md) for AI-provider
+  boundaries, telemetry, and opt-out controls.
+- **You set the blast radius.** The engine runs in a sandbox with kernel-level
+  egress control — it can reach *only* the targets you authorize in `scope.yaml`,
+  enforced at the network layer.
+- **Transparent coverage.** Niro reports what it *couldn't* reach on every run, so
+  coverage is never a black box — and it remembers intended behavior so it won't
+  keep flagging it. Strongest on the everyday exploitable class; novel,
+  multi-step business logic stays yours.
+
+Need governance, audit, compliance, or enterprise deployment support? Talk to APX
+Labs about Niro Enterprise.
+
+## Docs
+
+- **[Get started](docs/getting-started.md)** — prerequisites, installation, and
+  your first run.
+- **[Prepare your app](docs/prepare-your-app.md)** — targets, scope, credentials,
+  fixtures, and test state.
+- **[Run Niro](docs/run-niro.md)** — find or fix, local or CI, whole-app or
+  focused.
+- **[Review the results](docs/review-results.md)** — findings, exploits,
+  regression tests, and fix PRs.
+- **[Security and data](docs/security-and-data.md)** — data flow, AI providers,
+  sandboxing, egress, and telemetry.
+- **[Coverage and limitations](docs/coverage-and-limitations.md)** — what Niro
+  tests, what it reports, and where humans remain responsible.
+- **[Reference](docs/cli-and-config-reference.md)** — commands, flags, and
+  configuration.
+- **[Troubleshooting](docs/troubleshooting.md)** — common failures, diagnostics,
+  and support artifacts.
 
 ## License
 

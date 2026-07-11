@@ -1,0 +1,59 @@
+# Niro Find (MR) - pentest a merge request and report findings.
+#
+# Copy this file to `.gitlab-ci.yml` at your project root (or `include:` it).
+# Niro posts its findings as an MR comment and sets the `Security / Niro`
+# commit status. It never changes your code.
+#
+# This template uses Claude Code. To use Codex or Copilot CLI instead, see:
+# https://github.com/apxlabs-ai/niro/blob/main/docs/supported-agents.md#authenticate-in-ci
+#
+# Configure GITLAB_TOKEN with `api` scope and either ANTHROPIC_API_KEY or
+# CLAUDE_CODE_OAUTH_TOKEN as masked CI/CD variables.
+
+stages:
+  - security
+
+niro-find-pr:
+  stage: security
+  image: ubuntu:24.04
+  services:
+    - docker:27-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_CERT_PATH: "/certs/client"
+    DOCKER_TLS_VERIFY: "1"
+    GIT_DEPTH: "0"
+    NIRO_CONFIG_DIR: niro
+    NIRO_CI_ARTIFACT_INCLUDE_FINDINGS: "true"
+    NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS: "false"
+  rules:
+    - if: "$CI_MERGE_REQUEST_IID"
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends nodejs npm git curl ca-certificates docker.io
+    - |
+      GLAB_VERSION="1.64.0"
+      case "$(uname -m)" in
+        x86_64) GLAB_ARCH="amd64" ;;
+        aarch64|arm64) GLAB_ARCH="arm64" ;;
+        *) echo "Unsupported runner architecture: $(uname -m)"; exit 1 ;;
+      esac
+      curl -fsSL "https://gitlab.com/gitlab-org/cli/-/releases/v${GLAB_VERSION}/downloads/glab_${GLAB_VERSION}_linux_${GLAB_ARCH}.tar.gz" | tar -xz -C /usr/local bin/glab
+    - curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
+  script:
+    - |
+      test -n "$GITLAB_TOKEN" || { echo "GITLAB_TOKEN is required"; exit 1; }
+      niro find \
+        --pr-number="$CI_MERGE_REQUEST_IID" \
+        --agent=claude \
+        --config-dir="$NIRO_CONFIG_DIR" \
+        --include-findings="$NIRO_CI_ARTIFACT_INCLUDE_FINDINGS" \
+        --upload-debug-logs="$NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS"
+  artifacts:
+    when: always
+    paths:
+      - niro-summary.md
+      - niro-knowledge.tar
+      - niro-debug-logs.tar
+    expire_in: 30 days

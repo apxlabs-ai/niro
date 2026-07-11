@@ -1,0 +1,81 @@
+name: Niro Find (PR)
+
+# Pentest a pull request's diff and post the findings as a PR comment. Unlike
+# the whole-app find workflow, this runs per PR and needs the built-in
+# GITHUB_TOKEN with pull-requests / statuses write — no GitHub App required
+# (the App is only for fix, which pushes branches and opens PRs).
+on:
+  pull_request:
+
+permissions:
+  contents: read # read the repo + PR diff
+  pull-requests: write # post the findings comment
+  statuses: write # set the Security / Niro commit status
+
+concurrency:
+  group: niro-find-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  find:
+    name: Pentest the PR and comment findings
+    # Same-repository, non-Dependabot PRs only. Fork PRs don't receive the
+    # provider secrets and get read-only permissions (and running Niro on
+    # untrusted fork code with secrets is a security risk); Dependabot PRs push a
+    # same-repo branch but GitHub still gives them a read-only token and no
+    # secrets. Use a reviewed pull_request_target flow if you need those.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          # Full history + persisted credentials so Niro can build the PR diff
+          # (git fetch/diff of base..head) using the built-in GITHUB_TOKEN.
+          fetch-depth: 0
+
+      - name: Install Niro
+        shell: bash
+        run: curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
+
+      # This workflow uses Claude Code. To use Codex or Copilot CLI instead:
+      # https://github.com/apxlabs-ai/niro/blob/main/docs/supported-agents.md#authenticate-in-ci
+      - name: Run Niro
+        shell: bash
+        env:
+          # gh reads GH_TOKEN to fetch the PR and post the findings comment;
+          # GH_ENTERPRISE_TOKEN is the same for GitHub Enterprise Server hosts.
+          GH_TOKEN: ${{ github.token }}
+          GH_ENTERPRISE_TOKEN: ${{ github.token }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          niro find \
+            --pr-number="${{ github.event.pull_request.number }}" \
+            --agent=claude \
+            --config-dir=niro \
+            --include-findings=true \
+            --upload-debug-logs=false
+
+      - name: Upload Niro knowledge
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: niro-knowledge
+          path: niro-knowledge.tar
+          if-no-files-found: ignore
+          retention-days: 30
+
+      # Change --upload-debug-logs to true above to produce this unsafe bundle.
+      - name: Upload debug logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: niro-debug-logs-unsafe
+          path: niro-debug-logs.tar
+          if-no-files-found: ignore
+          retention-days: 7
