@@ -54,12 +54,12 @@ version: 1
 #                                # where speed and cost matter more than depth.
 #
 # All three slots optional and independent — pin only what you care about. Omit
-# a slot to keep Niro's built-in default for the selected agent; this is the
+# a slot to keep Niro's built-in default for the selected agent CLI; this is the
 # recommended path — Niro auto-selects both the model and the correct identifier
-# form for your agent and auth setup.
+# form for your agent CLI and auth setup.
 #
 # If you DO pin a name, it is used verbatim — Niro does not rewrite an explicit
-# override — so it must be the exact identifier your active agent accepts (the
+# override — so it must be the exact identifier your active agent CLI accepts (the
 # same name you'd pass to its own --model flag). For GitHub Copilot this depends
 # on your auth path: native Copilot OAuth needs dot-form (e.g. claude-opus-4.7),
 # while BYOK Anthropic needs hyphen-form (e.g. claude-opus-4-7). When unsure,
@@ -76,8 +76,8 @@ version: 1
 # switch it to dot-form (or drop the override) to avoid an HTTP 404.
 #
 # Niro only validates that pinned names are non-empty when present. It does not
-# probe the active agent's model catalog before a run; an unsupported name
-# will fail later when that agent session is created.
+# probe the active agent CLI's model catalog before a run; an unsupported name
+# will fail later when that attacker agent session is created.
 
 # Git provider settings.
 # git_provider:
@@ -129,8 +129,8 @@ version: 1
 # security:
 #   env:
 #     # ADDITIONAL host environment variables Niro should read, beyond the
-#     # ones it already reads for your agent. Niro automatically reads
-#     # the standard credentials and settings your agent uses (API
+#     # ones it already reads for your agent CLI. Niro automatically reads
+#     # the standard credentials and settings your agent CLI uses (API
 #     # keys, tokens, proxy, region, model) — you do NOT need to list those.
 #     #
 #     # Use this only for a variable Niro doesn't already know by name, such

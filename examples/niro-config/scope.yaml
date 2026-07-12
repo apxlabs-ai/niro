@@ -14,7 +14,7 @@
 #   api.staging.example.com:443        Exact host and port.
 #   api.staging.example.com:80,443     Multiple ports.
 #   api.staging.example.com:8000-8999  Port range.
-#   *.staging.example.com:443          One-level subdomain wildcard.
+#   *.staging.example.com:443          Apex + one-label subdomain wildcard.
 #   10.0.42.0/24:443                   IPv4 CIDR.
 #   [2001:db8::/32]:443                IPv6 CIDR.
 #

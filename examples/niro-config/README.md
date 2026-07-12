@@ -47,8 +47,8 @@ Omit `--url` when you want Niro to own this lifecycle.
 Review and commit the harness so future runs reproduce the same baseline. A
 person may authorize the local host and port produced by that harness.
 
-Docker or Podman is always required for Niro's isolated attacker sandbox. That
-container runtime is separate from where the application itself runs.
+Docker or Podman is always required for Niro's isolated attack-tool sandbox.
+That container runtime is separate from where the application itself runs.
 
 ## Know the files
 
@@ -67,7 +67,7 @@ The `.example` files are format references. Copy an accepted-behavior or
 coverage-gap example only when that specific advanced context applies. Do not
 create empty registers for a first run.
 
-Claude Code is the default agent. Pass `--agent=codex` or `--agent=copilot` to
-use another supported agent. Niro detects GitHub, GitLab, Azure DevOps, and other
-supported Git providers from the repository remote. It creates reviewable
-changes but never merges them.
+Claude Code is the default agent CLI. Pass `--agent=codex` or
+`--agent=copilot` to use another supported agent CLI. Niro detects GitHub,
+GitLab, Azure DevOps, and other supported Git providers from the repository
+remote. It creates reviewable changes but never merges them.

@@ -212,7 +212,7 @@
 
   <path class="flow-both" d="M1030 610 H1070 V275 H1125"/>
   <rect class="flow-label" x="970" y="300" width="200" height="26" rx="4"/>
-  <text class="label" x="1070" y="318" text-anchor="middle">Attacker reasoning context</text>
+  <text class="label" x="1070" y="318" text-anchor="middle">Attacker agent context</text>
 
   <path class="flow-optional" d="M640 1010 H1125"/>
   <rect class="flow-label" x="780" y="996" width="210" height="26" rx="4"/>

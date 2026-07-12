@@ -1,6 +1,6 @@
 # Prepare your app
 
-Before a run, choose where the application runs, which agent and Git provider
+Before a run, choose where the application runs, which agent CLI and Git provider
 Niro uses, what it should test, and whether it should only report findings or
 also prepare fixes.
 
@@ -61,10 +61,10 @@ the generated [harness contract](../examples/niro-config/harness/README.md) for
 the exact `start`, `stop`, `seed`, and `reset` lifecycle.
 
 This choice is separate from Docker or Podman. A container runtime is always
-needed for Niro's isolated attacker sandbox; it does not determine where the
+needed for Niro's isolated attack-tool sandbox; it does not determine where the
 application itself runs.
 
-## 2. Choose the agent
+## 2. Choose the agent CLI
 
 | Choice | You do | Niro does |
 | --- | --- | --- |
@@ -72,7 +72,7 @@ application itself runs.
 | Codex | Authenticate Codex and pass `--agent=codex` | Runs through your Codex configuration |
 | Copilot | Authenticate Copilot and pass `--agent=copilot` | Runs through your Copilot configuration |
 
-Niro uses the agent's existing provider account and does not proxy model
+Niro uses the agent CLI's existing provider account and does not proxy model
 requests. See [Supported agents](supported-agents.md) for local and CI
 authentication.
 
@@ -109,7 +109,7 @@ must authorize remote targets before testing. See
 | Choice | Run | Result |
 | --- | --- | --- |
 | Find | `niro find` | Proven findings without fix branches or pull requests |
-| Fix | `niro fix` | Fixes, regression tests, and reviewable pull requests when Niro can safely remediate the bug |
+| Fix | `niro fix` | Fixes, validation evidence, and reviewable pull requests when Niro can safely remediate the bug |
 
 ## Put the choices together
 

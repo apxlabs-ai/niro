@@ -14,9 +14,9 @@ your project or CI configuration.
 - **Customer-controlled execution:** The Niro CLI, developer agent, and attacker
   agent run on your workstation or CI runner. Attack tools run in a Docker or
   Podman sandbox. Niro writes local artifacts to your filesystem.
-- **AI providers:** The developer and attacker agents connect directly to the
-  provider configured for Claude Code, Codex, or Copilot CLI. Niro does not
-  operate a model proxy, and the attack sandbox does not hold provider
+- **AI providers:** The developer agent and the attacker agent connect directly
+  to the provider configured for Claude Code, Codex, or Copilot CLI. Niro does
+  not operate a model proxy, and the attack sandbox does not hold provider
   credentials or make model requests.
 - **Authorized destinations:** The attack sandbox sends test traffic only to
   the hosts, CIDRs, and ports authorized in `scope.yaml` during a normal run.
@@ -39,7 +39,8 @@ through a Docker or Podman sandbox running in your environment.
 
 Depending on the command and your configuration, data can go directly to:
 
-- your selected AI provider for agent reasoning;
+- your selected AI provider for reasoning by the developer agent and attacker
+  agent;
 - destinations authorized in `scope.yaml` for security-test traffic;
 - your Git provider for repository, branch, pull-request, comment, and status
   operations;
@@ -79,8 +80,8 @@ run.
 Niro does not serialize raw target credential values into prompts or normal
 credential-list responses sent to the AI provider. The provider receives
 credential metadata and environment-variable names. Raw values are injected
-into the environment of sandboxed commands, so the agent can use credentials
-without placing them directly in model context.
+into the environment of sandboxed commands, so the attacker agent can use
+credentials without placing them directly in model context.
 
 Command output and target responses do return to the AI provider. If a command
 prints a credential, or an application response reflects it, that value can
@@ -118,8 +119,8 @@ See [Telemetry](telemetry.md) for the complete event schema and endpoint.
   removed with the container.
 - Credentials, fixtures, finding proofs, and run state stay in local `niro/`
   paths that are added to `.gitignore`.
-- CLI, agent, and security logs are written to Niro's operating-system cache
-  directory on your host.
+- CLI, attack-tool, and security logs are written to Niro's operating-system
+  cache directory on your host.
 - Summaries and knowledge or debug bundles are written to your workspace.
 - Branches, pull requests, comments, and statuses are stored by your Git
   provider when those features are used.
@@ -132,7 +133,7 @@ outputs remain available.
 ### Can Niro change or merge my code?
 
 `niro find` does not create branches, commits, or pull requests. `niro fix`
-allows the developer agent to prepare fixes, regression tests, commits, and
+allows the developer agent to prepare fixes, validation evidence, commits, and
 pull requests for confirmed findings. Niro never merges generated changes; you
 review every diff and decide what to merge.
 

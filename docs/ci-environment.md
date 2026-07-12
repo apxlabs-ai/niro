@@ -5,19 +5,21 @@ workflows.
 
 ## Model selection
 
-Niro does not set the selected agent's model — use the agent's own mechanism:
+Niro does not set the developer agent's model. Use the selected agent CLI's
+own mechanism:
 `COPILOT_MODEL` for Copilot, `ANTHROPIC_MODEL` for Claude, or Codex's config.
 
 Niro's task-specific model tiers are pinned in `niro.yaml`'s `models:` block.
-For Claude and Codex, those tiers are independent of the selected agent's model.
+For Claude and Codex, the attacker agent's tiers are independent of the
+developer agent's model.
 **Copilot is the exception:** a BYOK provider serves a single model, so
 `COPILOT_MODEL` also becomes the default for every tier that `niro.yaml` does
 not pin. To use different models, pin `models.high`, `models.medium`, and
 `models.low` in `niro.yaml`.
 
-## Agent Authentication
+## Agent CLI authentication
 
-Add the secret for the agent you run (`--agent`, default `claude`).
+Add the secret for the agent CLI you run (`--agent`, default `claude`).
 
 ### GitHub Pull Requests
 

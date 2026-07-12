@@ -8,12 +8,12 @@ from the root of the Git repository you want to test.
 | Requirement | Why Niro needs it | Quick check |
 | --- | --- | --- |
 | Docker or Podman | Runs the isolated attack sandbox | `docker info` or `podman info` |
-| Claude Code, Codex, or Copilot CLI | Runs the developer and attacker agents | `claude --version`, `codex --version`, or `copilot --version` |
+| Claude Code, Codex, or Copilot CLI | Runs both the developer agent and the attacker agent | `claude --version`, `codex --version`, or `copilot --version` |
 | Git | Reads the repository and prepares fixes | `git rev-parse --show-toplevel` |
 | Git provider CLI | Opens fix pull requests | `gh auth status`, `glab auth status`, or `az account show` |
 
-You need only one container runtime, one supported agent, and the CLI for your
-Git provider. Git-provider authentication is required for `fix`; a local,
+You need only one container runtime, one supported agent CLI, and the CLI for
+your Git provider. Git-provider authentication is required for `fix`; a local,
 goal-based `find` run can be used before you connect a Git provider.
 
 See [Prerequisites](prerequisites.md) for installation links and platform notes.
@@ -38,17 +38,17 @@ Verify the installation:
 niro version
 ```
 
-## Choose an agent
+## Choose an agent CLI
 
-Niro uses the agent you already have installed and authenticated.
+Niro uses the agent CLI you already have installed and authenticated.
 
-| Agent | Select it |
+| Agent CLI | Select it |
 | --- | --- |
 | Claude Code | Default; omit `--agent` |
 | OpenAI Codex | `--agent=codex` |
 | GitHub Copilot CLI | `--agent=copilot` |
 
-Start the selected agent once and complete its normal sign-in flow. Niro does
+Start the selected agent CLI once and complete its normal sign-in flow. Niro does
 not have a separate login and does not proxy model requests. See
 [Supported agents](supported-agents.md) for local and CI authentication.
 
@@ -60,7 +60,7 @@ For a focused first run that tests the complete pentest-to-fix workflow:
 niro fix --goal "Test the login and session flows"
 ```
 
-Use your selected agent when Claude Code is not the default:
+Use your selected agent CLI when Claude Code is not the default:
 
 ```bash
 niro fix --agent=codex --goal "Test the login and session flows"
@@ -108,11 +108,11 @@ all scopes and execution modes.
 
 1. Initializes Niro's project configuration under `niro/`.
 2. Detects Docker or Podman and starts the isolated attack sandbox.
-3. Uses the selected agent to bring up or connect to the application and create
-   the test state it needs.
+3. Uses the selected agent CLI to bring up or connect to the application and
+   create the test state it needs.
 4. Tests authorized application surfaces and proves exploitable findings.
-5. In `fix` mode, prepares fixes and regression tests and opens reviewable pull
-   requests for changes it can safely make.
+5. In `fix` mode, prepares fixes and validation evidence and opens reviewable
+   pull requests for changes it can safely make.
 
 Niro never merges generated changes.
 
@@ -127,7 +127,7 @@ A completed run prints where it placed the results.
 - Local summaries, findings, logs, and knowledge bundles remain in your
   workspace or Niro cache unless you configure a workflow to publish them.
 
-Review every finding, exploit proof, regression test, and code change before
+Review every finding, exploit proof, validation result, and code change before
 accepting it.
 
 ## If the run cannot start
@@ -141,8 +141,8 @@ git rev-parse --show-toplevel
 gh auth status     # or glab auth status / az account show
 ```
 
-If the agent command exists but cannot make a model request, open that agent
-directly and complete its sign-in flow. If `fix` can test the app but cannot
+If the agent CLI exists but cannot make a model request, open it directly and
+complete its sign-in flow. If `fix` can test the app but cannot
 open a pull request, verify the repository remote and Git-provider login, or run
 `find` while you correct the Git permissions.
 
@@ -152,6 +152,14 @@ open a pull request, verify the repository remote and Git-provider login, or run
   test state.
 - [Run Niro](run-niro.md) for whole-app, focused, commit-range, pull-request,
   and CI runs.
+- [Review the results](review-results.md) for findings, proof bundles, validation,
+  and fix pull requests.
+- [Coverage and limitations](coverage-and-limitations.md) for interpreting clean,
+  partial, and change-focused runs.
+- [CLI and configuration reference](cli-and-config-reference.md) for exact
+  commands, flags, files, and defaults.
+- [Troubleshooting](troubleshooting.md) for diagnosis by failing boundary and
+  safe recovery steps.
 - [Supported agents](supported-agents.md) for provider authentication and model
   configuration.
 - [Security and data](security-and-data.md) for the data-flow diagram and

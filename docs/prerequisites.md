@@ -5,29 +5,30 @@ command fails, that's what you need to install:
 
 ```bash
 docker --version || podman --version               # container runtime (the sandbox)
-claude --version                                   # agent (or: codex / copilot)
+claude --version                                   # agent CLI (or: codex / copilot)
 git --version                                      # version-control foundation
 gh --version || az --version || glab --version     # your Git provider's CLI
 ```
 
 ## A container runtime
 
-Niro runs an autonomous attacker that fires real exploits. To keep your machine
-safe, it runs *caged*: inside a container whose network is fenced at the kernel
-layer, restricted to only the targets in your `scope.yaml`. Docker or Podman is
-the cage.
+The attacker agent can fire real exploits, so its command-line and browser
+tools run inside a container whose network is fenced at the kernel layer. Those
+tools can reach only the targets in your `scope.yaml`. The attacker agent itself
+runs on your workstation or CI runner and connects to your configured AI
+provider there.
 
 - **macOS / Windows:** [Docker Desktop](https://docs.docker.com/get-started/get-docker/)
 - **Linux:** [Docker Engine](https://docs.docker.com/get-started/get-docker/) or [Podman](https://podman.io/docs/installation)
 
-## An agent
+## An agent CLI
 
-This is the reasoning engine Niro drives to play both roles — the attacker that
-exploits, and the developer that fixes. Install the one you use and sign it in;
-it runs on your own model provider (your API key or subscription — none of your
-code or prompts route through Niro).
+This is the agent CLI Niro drives to run both roles — the attacker agent that
+exploits, and the developer agent that fixes. Install the one you use and sign
+it in. Model requests go directly to the provider configured for that agent CLI;
+Niro does not proxy them through an APX Labs execution service.
 
-| Agent | Install | Select it in Niro |
+| Agent CLI | Install | Select it in Niro |
 | --- | --- | --- |
 | Claude Code | [install](https://code.claude.com/docs/en/overview) | default |
 | OpenAI Codex | [install](https://developers.openai.com/codex/cli) | `--agent=codex` |

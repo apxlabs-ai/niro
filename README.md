@@ -16,12 +16,12 @@ Niro sets the stage first — it stands up your app (or points at a target you
 provide), seeds test state, and creates the users and data an attacker needs, so
 you skip most of the environment setup. Then the two-person team goes to work:
 
-- **The attacker** hits your running app like a real adversary — finds
-  exploitable bugs, proves each with a working exploit, re-tests after a fix.
-  Never changes your code.
-- **The developer** patches the bugs it can safely fix and adds a regression
-  test for each fix — so every PR arrives with evidence it works, not just a
-  claim. Never merges — you do.
+- **The attacker agent** hits your running app like a real adversary — finds
+  exploitable bugs and proves each with a working exploit. Never changes your
+  code.
+- **The developer agent** patches the bugs it can safely fix and records
+  validation evidence — normally a regression test in the project's suite — so
+  every PR arrives with evidence, not just a claim. Never merges — you do.
 
 Most security tools hand you a backlog of maybes and walk away. Niro doesn't stop
 at proven findings — in fix mode it turns each into a focused **pull request**.
@@ -41,12 +41,12 @@ pentester needs another test tenant, back to eng. A finding won't reproduce, it
 ping-pongs between security and dev. A fix ships, security has to re-test. Weeks
 pass, a dozen people touch it, and the code has already moved on.
 
-**Niro collapses that relay into one autonomous run.** Its **attacker** does the
-security team's job, its **developer** does the dev team's — and it *automates
-the setup* engineering used to own. You still set the scope, review the diffs,
-and decide what merges; Niro handles the back-and-forth in between — so three
-teams' effort lands in a few hours as review-ready pull requests, grouped by root
-cause so each is small enough to actually review.
+**Niro collapses that relay into one autonomous run.** Its **attacker agent**
+does the security team's job, its **developer agent** does the dev team's — and
+it *automates the setup* engineering used to own. You still set the scope,
+review the diffs, and decide what merges; Niro handles the back-and-forth in
+between — so three teams' effort lands in a few hours as review-ready pull
+requests, grouped by root cause so each is small enough to actually review.
 
 ## Quickstart
 
@@ -62,7 +62,7 @@ That's it. `niro fix` runs the end-to-end workflow and opens review-ready fix
 PRs. You decide what to merge.
 
 See [Run Niro](docs/run-niro.md) for report-only and scoped runs, supported
-agents, CI, and agent-native workflows.
+agent CLIs, CI, and interactive developer agent workflows.
 
 ## What a run actually does
 
@@ -74,11 +74,11 @@ doesn't stop until each bug is proven:
 2. **Unblock** — when a login, empty database, disabled feature, or missing tenant
    blocks testing, Niro creates what it needs to keep going instead of silently
    skipping that part of the app.
-3. **Prove** — every finding is a false alarm until Niro reproduces it and writes
-   a test that fails on the bug. Doubt is demoted, never inflated.
+3. **Prove** — every finding is a false alarm until Niro reproduces it and leaves
+   a runnable proof. Doubt is demoted, never inflated.
 
 Proven bugs are grouped by root cause into focused, review-ready PRs — one per
-cause, each with its own regression test.
+cause, each with its own validation evidence.
 
 ## Built for trust
 
@@ -89,9 +89,9 @@ trust back:
   require uploading your repository, credentials, findings, or logs to a Niro
   backend. See [Security and data](docs/security-and-data.md) for AI-provider
   boundaries, telemetry, and opt-out controls.
-- **You set the blast radius.** The engine runs in a sandbox with kernel-level
-  egress control — it can reach *only* the targets you authorize in `scope.yaml`,
-  enforced at the network layer.
+- **You set the blast radius.** Attack tools run in a sandbox with kernel-level
+  egress control — they can reach *only* the targets you authorize in
+  `scope.yaml`, enforced at the network layer.
 - **Transparent coverage.** Niro reports what it *couldn't* reach on every run, so
   coverage is never a black box — and it remembers intended behavior so it won't
   keep flagging it. Strongest on the everyday exploitable class; novel,
@@ -109,7 +109,7 @@ Labs about Niro Enterprise.
 - **[Run Niro](docs/run-niro.md)** — find or fix, local or CI, whole-app or
   focused.
 - **[Review the results](docs/review-results.md)** — findings, exploits,
-  regression tests, and fix PRs.
+  validation evidence, and fix PRs.
 - **[Security and data](docs/security-and-data.md)** — data flow, AI providers,
   sandboxing, egress, and telemetry.
 - **[Coverage and limitations](docs/coverage-and-limitations.md)** — what Niro

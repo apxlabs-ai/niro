@@ -1,7 +1,7 @@
 # Run Niro
 
 Run Niro from the root of the Git repository you want to test. Choose the
-outcome you want, the application surface to test, and the agent to use. The
+outcome you want, the application surface to test, and the agent CLI to use. The
 turnkey `find` and `fix` commands initialize Niro automatically when they start
 the application. For an existing runtime, create and authorize its named
 environment profile, then pass its exact URL. See [Prepare your
@@ -12,7 +12,7 @@ app](prepare-your-app.md#test-an-existing-staging-application).
 | Command | What it does | Code changes |
 | --- | --- | --- |
 | `niro find` | Pentests the selected scope and reports proven findings | Does not create branches, commits, or fix pull requests |
-| `niro fix` | Pentests, prepares fixes and regression tests, and delivers reviewable changes | Can create branches, commits, pull requests, or patch artifacts; never merges |
+| `niro fix` | Pentests, prepares fixes and validation evidence, and delivers reviewable changes | Can create branches, commits, pull requests, or patch artifacts; never merges |
 
 Use `find` when you want evidence without remediation changes. Use `fix` when
 you want Niro to carry confirmed findings through remediation and verification.
@@ -36,7 +36,7 @@ revision cannot be verified.
 
 | Scope | Example | Use it for |
 | --- | --- | --- |
-| Whole application | `niro fix` | A complete assessment of the configured application |
+| Whole application | `niro fix` | A broad assessment of the configured application |
 | Focused goal | `niro fix --goal "Test account recovery"` | A feature, workflow, or security concern |
 | Commit range | `niro fix --base-sha origin/main --head-sha HEAD` | Changes between two Git revisions |
 | Pull request or merge request | `niro find --pr-number 42` | Reviewing an existing change without modifying its branch |
@@ -49,29 +49,29 @@ A local command without a scope tests the whole application. Whole-application
 runs can take a few hours; a goal, range, or pull-request scope is usually the
 faster feedback loop.
 
-## Choose an agent
+## Choose an agent CLI
 
-Claude Code is the default. Select another installed agent per command:
+Claude Code is the default. Select another installed agent CLI per command:
 
 ```bash
 niro find --agent=codex --goal "Test account recovery"
 niro fix --agent=copilot --goal "Test account recovery"
 ```
 
-| Agent | Flag |
+| Agent CLI | Flag |
 | --- | --- |
 | Claude Code | Omit `--agent` |
 | OpenAI Codex | `--agent=codex` |
 | GitHub Copilot CLI | `--agent=copilot` |
 
-Agent authentication and model selection remain under that agent's normal
+Agent CLI authentication and model selection remain under that CLI's normal
 configuration. See [Supported agents](supported-agents.md) and
 [Model selection](model-selection.md).
 
 ## Run locally
 
 Start with a focused report-only run when you want to validate the application
-setup and agent authentication before allowing remediation changes:
+setup and agent CLI authentication before allowing remediation changes:
 
 ```bash
 niro find --goal "Test authentication and session handling"
@@ -93,15 +93,16 @@ the workspace can contain `niro-summary.md`, `niro-knowledge.tar`, and optional
 debug bundles. `fix` can also create remote branches and pull requests. See
 [Review the results](review-results.md) for the review workflow.
 
-To invoke Niro from inside an interactive agent session instead of using the
-turnkey commands, follow [Run Niro from an interactive agent
-session](supported-agents.md#run-niro-from-an-interactive-agent-session).
+To invoke Niro from inside an interactive developer agent session instead of
+using the turnkey commands, follow [Run Niro from an interactive developer
+agent session](supported-agents.md#run-niro-from-an-interactive-developer-agent-session).
 
 ## Run in CI
 
 CI uses the same `niro find` and `niro fix` commands as a local run. The runner
-needs a container runtime, noninteractive agent authentication, the application
-dependencies, and any Git-provider permissions required by the chosen outcome.
+needs a container runtime, noninteractive agent CLI authentication, the
+application dependencies, and any Git-provider permissions required by the
+chosen outcome.
 
 ### GitHub Actions
 
@@ -131,7 +132,7 @@ The ready-to-copy templates cover GitHub Actions and GitLab CI/CD. You can run
 the same CLI commands in another CI system and configure that workflow's
 checkout, secrets, container runtime, and artifact publication directly.
 
-See [CI environment](ci-environment.md) for agent secrets and provider-specific
+See [CI environment](ci-environment.md) for agent CLI secrets and provider-specific
 environment variables.
 
 ## Control runtime and cost
@@ -165,8 +166,8 @@ container through Docker or Podman.
 
 - [Prepare your app](prepare-your-app.md) for targets, scope, credentials, and
   test state.
-- [Review the results](review-results.md) for findings, proofs, regression
-  tests, and remediation changes.
+- [Review the results](review-results.md) for findings, proofs, validation, and
+  remediation changes.
 - [CLI and configuration reference](cli-and-config-reference.md) for every
   command, flag, and configuration field.
 - [Troubleshooting](troubleshooting.md) for startup failures and diagnostics.
