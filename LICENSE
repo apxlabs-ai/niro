@@ -1,10 +1,143 @@
-Functional Source License, Version 1.1, Apache 2.0 Future License
-SPDX-License-Identifier: FSL-1.1-Apache-2.0
+Niro Community Edition License Agreement
+Version 1.0 — July 12, 2026
 
-Copyright (c) 2026 APX Security, Inc. (dba APX Labs)
+Copyright (c) 2026 APX Security, Inc. (dba APX Labs).
+All rights reserved except those expressly granted below.
 
-This repository is private during development. Upon public release, the full
-text of the Functional Source License (FSL-1.1-Apache-2.0) will be included
-verbatim from https://fsl.software/.
+This agreement governs Niro Community Edition ("Niro"). By downloading,
+installing, copying, or using Niro, you agree to this agreement. If you do not
+agree, do not download, install, copy, or use Niro.
 
-Until then, all rights reserved.
+1. Definitions
+
+"Niro" means the Niro Community Edition executable software in object code
+form only, its attack-tool sandbox images, installers, documentation, examples,
+configuration templates, and updates that APX Labs provides under this
+agreement. Niro does not include third-party software governed by a separate
+license.
+
+"You" means the individual or legal entity exercising rights under this
+agreement.
+
+"Authorized Target" means a system that you own or control, or that you have
+the system owner's express permission to test.
+
+2. License grant
+
+Subject to this agreement, APX Labs grants you a non-exclusive,
+non-transferable, non-sublicensable, revocable, royalty-free license to:
+
+a. install and run Niro in object code form only for your internal business or
+personal purposes, including performing security assessments of Authorized
+Targets for yourself or a client;
+
+b. make exact, unmodified copies of Niro solely for backup, operational
+security, and deployment within your organization, including an internal
+artifact mirror;
+
+c. allow your employees and contractors to use those copies solely on your
+behalf and subject to this agreement, provided that you remain responsible for
+their compliance; and
+
+d. reproduce the documentation internally, and copy or adapt examples and
+configuration templates, solely as needed for your licensed use of Niro.
+
+No license fee is due for these rights.
+
+3. Restrictions
+
+Except where applicable law does not permit a restriction, you must not:
+
+a. distribute, publish, sublicense, sell, resell, rent, lease, loan, or otherwise
+make Niro available outside your organization, except to a contractor as
+permitted by Section 2(c);
+
+b. provide Niro itself, or access to Niro, as a hosted, managed, service-bureau,
+or other shared service for third parties;
+
+c. modify, translate, adapt, or create derivative works of Niro, except for
+examples and configuration templates as permitted by Section 2(d);
+
+d. reverse engineer, decompile, disassemble, or otherwise attempt to derive the
+source code or non-public design of Niro;
+
+e. bypass or interfere with a license, security, access-control, or technical
+protection mechanism in Niro;
+
+f. remove or alter a copyright, trademark, attribution, or proprietary notice;
+or
+
+g. use Niro against a system that is not an Authorized Target, or for an
+unlawful purpose.
+
+If applicable law gives you a right that cannot be restricted, you may exercise
+that right only to the extent required by that law.
+
+4. Proprietary software and source code
+
+Niro is proprietary software. Source code is not provided, and this agreement
+does not grant a right to receive or access source code. APX Labs and its
+licensors retain all right, title, and interest in Niro, including all
+intellectual property rights. No rights are granted by implication, estoppel,
+or otherwise. "Community Edition" identifies the no-charge product edition; it
+does not mean that Niro is open-source or source-available software.
+
+5. Third-party software
+
+Niro may include or use third-party software. That software remains subject to
+its own license terms and notices. If a third-party license conflicts with this
+agreement for that third-party software, the third-party license controls for
+that software only.
+
+6. No support commitment
+
+APX Labs has no obligation under this agreement to provide maintenance,
+support, updates, upgrades, or continued availability. Niro Enterprise and any
+other paid product or service are governed by separate terms.
+
+7. Term and termination
+
+This agreement continues until terminated. Your rights terminate automatically
+if you materially breach this agreement. Upon termination, you must stop using
+Niro and delete all copies under your control, except copies retained solely as
+required by law. Sections 3 through 12 survive termination.
+
+8. Disclaimer of warranties
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, NIRO IS PROVIDED "AS IS" AND "AS
+AVAILABLE," WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, WHETHER EXPRESS,
+IMPLIED, OR STATUTORY, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT, ACCURACY, SECURITY, OR THAT NIRO
+WILL BE ERROR-FREE. SECURITY TESTING CAN DISRUPT OR DAMAGE TARGET SYSTEMS. YOU
+ARE RESPONSIBLE FOR AUTHORIZATION, SCOPE, BACKUPS, REVIEWING OUTPUT, AND DECIDING
+WHETHER TO APPLY ANY PROPOSED CHANGE.
+
+9. Limitation of liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, APX LABS AND ITS AFFILIATES, LICENSORS,
+AND SUPPLIERS WILL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
+CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR FOR LOSS OF DATA, PROFITS,
+REVENUE, BUSINESS, OR USE, ARISING OUT OF OR RELATED TO NIRO OR THIS AGREEMENT,
+EVEN IF ADVISED OF THE POSSIBILITY. THEIR TOTAL AGGREGATE LIABILITY ARISING OUT
+OF OR RELATED TO NIRO OR THIS AGREEMENT WILL NOT EXCEED ONE HUNDRED U.S. DOLLARS
+(US $100). THESE LIMITATIONS APPLY TO THE MAXIMUM EXTENT PERMITTED BY LAW.
+
+10. Compliance with law
+
+You are responsible for complying with applicable laws, including computer
+access, privacy, data protection, sanctions, and export-control laws.
+
+11. Trademarks
+
+This agreement does not grant permission to use the names, logos, or trademarks
+of APX Labs or Niro except to identify Niro accurately.
+
+12. General
+
+This agreement is the entire agreement between you and APX Labs concerning Niro
+Community Edition and supersedes prior or contemporaneous statements about its
+license. If a provision is unenforceable, it will be limited to the minimum
+extent necessary and the remaining provisions will continue in effect. A
+failure to enforce a provision is not a waiver. You may not assign this
+agreement without APX Labs' prior written consent. APX Labs may assign it in
+connection with a merger, acquisition, reorganization, or sale of assets.

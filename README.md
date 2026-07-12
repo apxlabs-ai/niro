@@ -97,8 +97,8 @@ trust back:
   keep flagging it. Strongest on the everyday exploitable class; novel,
   multi-step business logic stays yours.
 
-Need governance, audit, compliance, or enterprise deployment support? Talk to APX
-Labs about Niro Enterprise.
+Niro Enterprise is planned separately for organization-scale governance, audit,
+compliance, deployment, and commercial support.
 
 ## Docs
 
@@ -119,9 +119,19 @@ Labs about Niro Enterprise.
 - **[Troubleshooting](docs/troubleshooting.md)** — common failures, diagnostics,
   and support artifacts.
 
-## License
+## Edition and license
 
-Apache License 2.0 ([LICENSE](LICENSE), [NOTICE](NOTICE)).
+Niro Community Edition is free-of-charge, proprietary software distributed as a
+prebuilt binary. Source code is not provided, and "Community Edition" does not
+mean open source or source available. This public repository is the
+documentation and binary-distribution surface; it does not contain Niro product
+source code.
+
+You may install and use Niro, keep backup copies, and mirror the unmodified
+binary inside your organization under the [Niro Community Edition License
+Agreement](LICENSE). Public redistribution, resale, modification, and reverse
+engineering are not permitted. Third-party components remain under their own
+licenses; see [NOTICE](NOTICE).
 
 ## Issues
 
