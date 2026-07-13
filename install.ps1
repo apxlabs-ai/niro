@@ -4,7 +4,8 @@
 #   irm https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.ps1 | iex
 #
 # Environment variables:
-#   NIRO_VERSION       Pin to a specific tag (e.g. v0.1.0). Defaults to latest.
+#   NIRO_VERSION       Pin an exact stable, dev, or RC tag (e.g. v0.1.0).
+#   NIRO_CHANNEL       Select stable, dev, or rc. Defaults to stable.
 #   NIRO_INSTALL_DIR   Override install directory.
 #                      Defaults to %LOCALAPPDATA%\Programs\niro.
 
@@ -44,23 +45,95 @@ $arch = switch ($env:PROCESSOR_ARCHITECTURE) {
     default { throw "unsupported architecture: $($env:PROCESSOR_ARCHITECTURE)" }
 }
 
-$version = if ($env:NIRO_VERSION) { $env:NIRO_VERSION } else { 'latest' }
-$archive = "niro_windows_${arch}.zip"
-$baseUrl = if ($version -eq 'latest') {
-    # Resolve "latest" to the concrete tag so progress and success
-    # lines show what the user actually got. /releases/latest 302-
-    # redirects to /releases/tag/<vX.Y.Z>; follow it and lift the tag
-    # off the final URL. Best-effort: on failure keep "latest" and
-    # let the download go through the same redirect.
-    try {
-        $resp = Invoke-WebRequest -Uri "https://github.com/$Repo/releases/latest" -UseBasicParsing
-        $resolved = $resp.BaseResponse.RequestMessage.RequestUri.AbsoluteUri
-        if ($resolved -match '/releases/tag/([^/]+)$') { $version = $matches[1] }
-    } catch { }
-    "https://github.com/$Repo/releases/latest/download"
-} else {
-    "https://github.com/$Repo/releases/download/$version"
+function Test-ReleaseTag($tag) {
+    $tag -match '^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-(dev|rc)\.(0|[1-9]\d*))?$'
 }
+
+function Test-ChannelTag($tag, $channel) {
+    if ($tag -notmatch '^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-(?<channel>dev|rc)\.(0|[1-9]\d*)$') {
+        return $false
+    }
+    $matches['channel'] -eq $channel
+}
+
+function Get-ReleasePage($uri) {
+    Invoke-RestMethod -Uri $uri -Headers @{
+        Accept                 = 'application/vnd.github+json'
+        'X-GitHub-Api-Version' = '2022-11-28'
+    }
+}
+
+function Resolve-Channel($channel) {
+    if ($channel -eq 'stable') {
+        try {
+            $response = Invoke-WebRequest -Uri "https://github.com/$Repo/releases/latest" -UseBasicParsing
+            $resolvedUri = if ($response.BaseResponse.ResponseUri) {
+                $response.BaseResponse.ResponseUri.AbsoluteUri
+            } elseif ($response.BaseResponse.RequestMessage.RequestUri) {
+                $response.BaseResponse.RequestMessage.RequestUri.AbsoluteUri
+            } else {
+                $null
+            }
+        } catch {
+            throw "could not resolve the stable release channel: $_"
+        }
+        if ($resolvedUri -notmatch '/releases/tag/([^/]+)$') {
+            throw 'no published stable release found'
+        }
+        $tag = $matches[1]
+        if (-not (Test-ReleaseTag $tag) -or $tag -match '-') {
+            throw 'no published stable release found'
+        }
+        return $tag
+    }
+
+    $page = 1
+    $bestRelease = $null
+    $bestPublishedAt = $null
+    while ($true) {
+        try {
+            $releases = @(Get-ReleasePage "https://api.github.com/repos/$Repo/releases?per_page=100&page=$page")
+        } catch {
+            throw "could not resolve the $channel release channel: $_"
+        }
+        foreach ($release in $releases |
+            Where-Object { -not $_.draft -and $_.prerelease -and (Test-ChannelTag $_.tag_name $channel) }) {
+            if (-not $release.published_at) { continue }
+            $publishedAt = [DateTimeOffset]$release.published_at
+            if (-not $bestRelease -or $publishedAt -gt $bestPublishedAt) {
+                $bestRelease = $release
+                $bestPublishedAt = $publishedAt
+            }
+        }
+        if ($releases.Count -lt 100) { break }
+        $page++
+    }
+    if ($bestRelease) { return $bestRelease.tag_name }
+    throw "no published $channel prerelease found"
+}
+
+$versionSelector = $env:NIRO_VERSION
+$channelSelector = $env:NIRO_CHANNEL
+if ($versionSelector -and $channelSelector) {
+    throw 'NIRO_VERSION and NIRO_CHANNEL cannot both be set'
+}
+
+if ($versionSelector) {
+    if (-not (Test-ReleaseTag $versionSelector)) {
+        throw 'NIRO_VERSION must match vX.Y.Z, vX.Y.Z-dev.N, or vX.Y.Z-rc.N'
+    }
+    $version = $versionSelector
+} else {
+    if (-not $channelSelector) { $channelSelector = 'stable' }
+    if ($channelSelector -notin @('stable', 'dev', 'rc')) {
+        throw "unknown NIRO_CHANNEL: $channelSelector (expected stable, dev, or rc)"
+    }
+    $version = Resolve-Channel $channelSelector
+}
+
+Write-Host "Resolved niro release: $version"
+$archive = "niro_windows_${arch}.zip"
+$baseUrl = "https://github.com/$Repo/releases/download/$version"
 
 $tmp = New-Item -ItemType Directory -Path (Join-Path $env:TEMP "niro-install-$(Get-Random)")
 try {

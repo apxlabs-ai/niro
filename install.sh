@@ -9,7 +9,8 @@
 #   curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
 #
 # Environment variables:
-#   NIRO_VERSION       Pin to a specific tag (e.g. v0.1.0). Defaults to latest.
+#   NIRO_VERSION       Pin an exact stable, dev, or RC tag (e.g. v0.1.0).
+#   NIRO_CHANNEL       Select stable, dev, or rc. Defaults to stable.
 #   NIRO_INSTALL_DIR   Override install directory. Defaults to the first
 #                      writable PATH-resident directory found among:
 #                      /opt/homebrew/bin (Apple Silicon Homebrew),
@@ -82,27 +83,141 @@ case "$ARCH" in
   *) die "unsupported architecture: $ARCH" ;;
 esac
 
-VERSION="${NIRO_VERSION:-latest}"
-ARCHIVE="niro_${OS}_${ARCH}.tar.gz"
-if [ "$VERSION" = "latest" ]; then
-  # Resolve "latest" to the concrete tag so progress and success lines
-  # show what the user actually got. /releases/latest 302-redirects to
-  # /releases/tag/<vX.Y.Z>; a HEAD with -w '%{url_effective}' gives us
-  # the final URL without touching the rate-limited API. Best-effort:
-  # if resolve fails (offline, GitHub flaky) we keep "latest" and the
-  # download still works via the same redirect.
-  RESOLVED=$(curl -fsSLI -o /dev/null -w '%{url_effective}' \
-    "https://github.com/${REPO}/releases/latest" 2>/dev/null) || RESOLVED=""
-  case "$RESOLVED" in
-    */releases/tag/*) VERSION=$(printf '%s' "$RESOLVED" | sed 's|.*/||') ;;
-  esac
-  BASE_URL="https://github.com/${REPO}/releases/latest/download"
-else
-  BASE_URL="https://github.com/${REPO}/releases/download/${VERSION}"
-fi
-
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
+
+# Parse top-level release objects without requiring jq or Python. The parser
+# tracks JSON strings and object depth, so braces in authored release notes do
+# not split an object. It prints the object count followed by the first usable
+# prerelease tag for the requested channel; GitHub orders the releases API
+# newest first.
+parse_release_page() {
+  awk -v channel="$1" '
+    function finish_object( token, tag, published) {
+      count++
+      if (!match(object, /"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"/)) return
+      token = substr(object, RSTART, RLENGTH)
+      sub(/^"tag_name"[[:space:]]*:[[:space:]]*"/, "", token)
+      sub(/"$/, "", token)
+      tag = token
+      if (tag !~ pattern) return
+      if (object !~ /"draft"[[:space:]]*:[[:space:]]*false/) return
+      if (object !~ /"prerelease"[[:space:]]*:[[:space:]]*true/) return
+      if (!match(object, /"published_at"[[:space:]]*:[[:space:]]*"[^"]*"/)) return
+      token = substr(object, RSTART, RLENGTH)
+      sub(/^"published_at"[[:space:]]*:[[:space:]]*"/, "", token)
+      sub(/"$/, "", token)
+      published = token
+      print "C " published " " tag
+    }
+    BEGIN {
+      number = "(0|[1-9][0-9]*)"
+      pattern = "^v" number "\\." number "\\." number "-" channel "\\." number "$"
+    }
+    {
+      line = $0 "\n"
+      for (i = 1; i <= length(line); i++) {
+        c = substr(line, i, 1)
+        if (in_string) {
+          if (depth > 0) object = object c
+          if (escaped) escaped = 0
+          else if (c == "\\") escaped = 1
+          else if (c == "\"") in_string = 0
+          continue
+        }
+        if (c == "\"") {
+          in_string = 1
+          if (depth > 0) object = object c
+          continue
+        }
+        if (c == "{") {
+          depth++
+          if (depth == 1) object = "{"
+          else object = object c
+          continue
+        }
+        if (c == "}") {
+          if (depth > 0) object = object c
+          if (depth == 1) finish_object()
+          depth--
+          continue
+        }
+        if (depth > 0) object = object c
+      }
+    }
+    END {
+      print "N " count + 0
+    }
+  ' "$2"
+}
+
+fetch_release_page() {
+  curl -fsSL \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    -o "$2" "$1" \
+    || die "could not resolve the ${3} release channel"
+}
+
+resolve_channel() {
+  CHANNEL="$1"
+  PAGE_FILE="${TMP}/releases.json"
+  if [ "$CHANNEL" = "stable" ]; then
+    RESOLVED=$(curl -fsSLI -o /dev/null -w '%{url_effective}' \
+      "https://github.com/${REPO}/releases/latest") \
+      || die "could not resolve the stable release channel"
+    TAG=${RESOLVED##*/}
+    if ! printf '%s\n' "$TAG" \
+      | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'; then
+      die "no published stable release found"
+    fi
+    printf '%s' "$TAG"
+    return
+  fi
+
+  PAGE=1
+  CANDIDATES="${TMP}/channel-candidates.txt"
+  : > "$CANDIDATES"
+  while :; do
+    fetch_release_page \
+      "https://api.github.com/repos/${REPO}/releases?per_page=100&page=${PAGE}" \
+      "$PAGE_FILE" "$CHANNEL"
+    PARSED_FILE="${TMP}/parsed-releases.txt"
+    parse_release_page "$CHANNEL" "$PAGE_FILE" > "$PARSED_FILE"
+    COUNT=$(awk '$1 == "N" {print $2}' "$PARSED_FILE")
+    awk '$1 == "C" {print $2 " " $3}' "$PARSED_FILE" >> "$CANDIDATES"
+    [ "$COUNT" -eq 100 ] || break
+    PAGE=$((PAGE + 1))
+  done
+  TAG=$(LC_ALL=C sort -r "$CANDIDATES" | awk 'NR == 1 {print $2}')
+  [ -z "$TAG" ] || { printf '%s' "$TAG"; return; }
+  die "no published ${CHANNEL} prerelease found"
+}
+
+VERSION_SELECTOR="${NIRO_VERSION:-}"
+CHANNEL_SELECTOR="${NIRO_CHANNEL:-}"
+if [ -n "$VERSION_SELECTOR" ] && [ -n "$CHANNEL_SELECTOR" ]; then
+  die "NIRO_VERSION and NIRO_CHANNEL cannot both be set"
+fi
+
+if [ -n "$VERSION_SELECTOR" ]; then
+  if ! printf '%s\n' "$VERSION_SELECTOR" \
+    | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(dev|rc)\.(0|[1-9][0-9]*))?$'; then
+    die "NIRO_VERSION must match vX.Y.Z, vX.Y.Z-dev.N, or vX.Y.Z-rc.N"
+  fi
+  VERSION="$VERSION_SELECTOR"
+else
+  CHANNEL_SELECTOR="${CHANNEL_SELECTOR:-stable}"
+  case "$CHANNEL_SELECTOR" in
+    stable|dev|rc) ;;
+    *) die "unknown NIRO_CHANNEL: $CHANNEL_SELECTOR (expected stable, dev, or rc)" ;;
+  esac
+  VERSION=$(resolve_channel "$CHANNEL_SELECTOR")
+fi
+
+printf "Resolved niro release: %s\n" "$VERSION"
+ARCHIVE="niro_${OS}_${ARCH}.tar.gz"
+BASE_URL="https://github.com/${REPO}/releases/download/${VERSION}"
 
 printf "Downloading niro %s (%s/%s)\n" "$VERSION" "$OS" "$ARCH"
 curl -fsSL -o "${TMP}/${ARCHIVE}" "${BASE_URL}/${ARCHIVE}" \

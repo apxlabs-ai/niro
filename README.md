@@ -112,6 +112,10 @@ compliance, deployment, and commercial support.
   validation evidence, and fix PRs.
 - **[Security and data](docs/security-and-data.md)** — data flow, AI providers,
   sandboxing, egress, and telemetry.
+- **[Security policy](SECURITY.md)** — supported versions and private
+  vulnerability reporting.
+- **[Releases and verification](docs/releases-and-verification.md)** — support
+  lifecycle, version pinning, checksums, image digests, and release notes.
 - **[Coverage and limitations](docs/coverage-and-limitations.md)** — what Niro
   tests, what it reports, and where humans remain responsible.
 - **[Reference](docs/cli-and-config-reference.md)** — commands, flags, and
