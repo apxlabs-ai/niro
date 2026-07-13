@@ -9,6 +9,8 @@
 
 > Finds the security bug. Ships the fix.
 
+[![Latest stable release](https://img.shields.io/github/v/release/apxlabs-ai/niro)](https://github.com/apxlabs-ai/niro/releases/latest)
+
 Niro works like an autonomous, two-person team living in your repo — two roles
 with one goal: real security bugs, found and closed with proof.
 
