@@ -2,13 +2,20 @@
 #
 # Copy this file to `.gitlab-ci.yml` at your project root (or `include:` it).
 # Niro posts its findings as an MR comment and sets the `Security / Niro`
-# commit status. It never changes your code.
+# commit status. The autonomous job is manual: start it only after reviewing
+# the MR revision and trusting it with this job's model and GitLab credentials.
 #
 # This template uses Claude Code. To use Codex or Copilot CLI instead, see:
 # https://github.com/apxlabs-ai/niro/blob/main/docs/supported-agents.md#authenticate-in-ci
 #
 # Configure GITLAB_TOKEN with `api` scope and either ANTHROPIC_API_KEY or
 # CLAUDE_CODE_OAUTH_TOKEN as masked CI/CD variables.
+
+# GitLab.com shared runners (docker:dind) work out of the box: Niro detects the
+# docker:dind topology and reaches its scanners over the daemon-published port,
+# secured with a mandatory per-run control token, and keeps its own cache/logs
+# in a job-scoped dir on the runner build root (outside your repository)
+# automatically. No extra runner setup is needed.
 
 stages:
   - security
@@ -29,9 +36,11 @@ niro-find-pr:
     NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS: "false"
   rules:
     - if: "$CI_MERGE_REQUEST_IID"
+      when: manual
+      allow_failure: false
   before_script:
     - apt-get update
-    - apt-get install -y --no-install-recommends nodejs npm git curl ca-certificates docker.io
+    - apt-get install -y --no-install-recommends nodejs npm git curl ca-certificates docker.io jq
     - |
       GLAB_VERSION="1.64.0"
       case "$(uname -m)" in
@@ -44,7 +53,34 @@ niro-find-pr:
   script:
     - |
       test -n "$GITLAB_TOKEN" || { echo "GITLAB_TOKEN is required"; exit 1; }
+      case "$CI_MERGE_REQUEST_EVENT_TYPE" in
+        detached)
+          reviewed_head="$CI_COMMIT_SHA"
+          ;;
+        merged_result)
+          # CI_COMMIT_SHA is GitLab's temporary merge commit. Niro PR mode
+          # tests the MR source revision, so normalize the checkout to it.
+          reviewed_head="$CI_MERGE_REQUEST_SOURCE_BRANCH_SHA"
+          ;;
+        merge_train)
+          echo "Merge-train pipelines can include other queued MRs and are not supported by this single-MR job"
+          exit 1
+          ;;
+        *)
+          echo "Unsupported GitLab MR pipeline type: $CI_MERGE_REQUEST_EVENT_TYPE"
+          exit 1
+          ;;
+      esac
+      [[ "$reviewed_head" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "GitLab MR head must be a full commit SHA"; exit 1; }
+      mr_json="$(glab api "projects/:id/merge_requests/$CI_MERGE_REQUEST_IID")"
+      current_head="$(jq -r '(.sha // .diff_refs.head_sha)' <<<"$mr_json")"
+      if [[ "${current_head,,}" != "${reviewed_head,,}" ]]; then
+        echo "MR !$CI_MERGE_REQUEST_IID moved after this pipeline was created; review and start a current pipeline"
+        exit 1
+      fi
+      git checkout --detach "$reviewed_head"
       niro find \
+        --autonomous \
         --pr-number="$CI_MERGE_REQUEST_IID" \
         --agent=claude \
         --config-dir="$NIRO_CONFIG_DIR" \

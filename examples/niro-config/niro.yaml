@@ -61,8 +61,8 @@ version: 1
 # If you DO pin a name, it is used verbatim — Niro does not rewrite an explicit
 # override — so it must be the exact identifier your active agent CLI accepts (the
 # same name you'd pass to its own --model flag). For GitHub Copilot this depends
-# on your auth path: native Copilot OAuth needs dot-form (e.g. claude-opus-4.7),
-# while BYOK Anthropic needs hyphen-form (e.g. claude-opus-4-7). When unsure,
+# on your auth path: native Copilot OAuth needs dot-form (e.g. claude-opus-4.8),
+# while BYOK Anthropic needs hyphen-form (e.g. claude-opus-4-8). When unsure,
 # omit the override and let Niro pick the correct form automatically.
 #
 # GitHub Copilot BYOK is all-or-nothing: it activates only when ALL THREE of

@@ -5,7 +5,8 @@ sure you have completed the [prerequisites](prerequisites.md) first.
 
 Niro is built around two commands:
 
-- **`niro find`** pentests and reports. It does not change your code.
+- **`niro find`** pentests and reports. It does not create fix branches,
+  commits, or pull requests, but it is not an OS-level read-only mode.
 - **`niro fix`** pentests and opens review-ready PRs with the patch and
   validation evidence.
 
@@ -17,7 +18,7 @@ to switch.
 | If you want to… | Jump to |
 | --- | --- |
 | Pentest everything and get PRs | [Fix the whole app](#fix-the-whole-app) |
-| See the bugs without changing code | [Find only](#find-only) |
+| See the bugs without creating fixes | [Find only](#find-only) |
 | Focus on a specific feature | [Target one area](#target-one-area) |
 | Check a PR before it merges | [Pentest a pull request](#pentest-a-pull-request) |
 | Test only the code that changed | [Pentest a diff](#pentest-a-diff) |
@@ -38,8 +39,10 @@ evidence. Review the diffs, merge what you want.
 
 ## Find only
 
-The exact same pentest, **zero code changes**. Perfect for a baseline audit, or
-when you just want the proof.
+The exact same pentest, without fix branches, commits, or pull requests. Perfect
+for a baseline audit, or when you just want the proof. Application preparation
+and report generation can still write files; see the
+[agent CLI privilege model](agent-cli-security.md).
 
 ```bash
 niro find
@@ -55,18 +58,21 @@ Point Niro at a specific surface. The `--goal` flag takes plain English.
 niro fix --goal "Pentest the billing API and its webhooks"
 ```
 
-Swap `fix` for `find` if you just want the read-only report.
+Swap `fix` for `find` if you want the report without fix branches or pull
+requests.
 
 ## Pentest a pull request
 
-Catch exploits before they reach your main branch (read-only).
+Catch exploits before they reach your main branch without creating fixes.
 
 ```bash
 niro find --pr-number 123
 ```
 
-To automate this check, run Niro in CI on `pull_request` events. See
-[Run in CI](#run-in-ci).
+To run this check in CI, manually dispatch the reviewed pull-request workflow.
+See [Run in CI](#run-in-ci). Autonomous runs have full current-user authority
+on the runner, so the example does not start automatically on unreviewed pull
+request code.
 
 ## Pentest a diff
 
@@ -90,16 +96,17 @@ Swap `find` for `fix` to open fixes for just that diff.
 Use the ready-to-copy workflows for your CI provider:
 
 - **GitHub Actions:** [`niro-find.yml`](../examples/github-actions/niro-find.yml)
-  runs a read-only sweep without a Git write credential;
+  runs a report-only sweep without a Git write credential;
   [`niro-fix.yml`](../examples/github-actions/niro-fix.yml) uses write
   permissions and a GitHub App to open fix PRs.
 - **GitLab CI/CD:** [`niro-find.yml`](../examples/gitlab-ci/niro-find.yml) runs a
-  read-only sweep; [`niro-fix.yml`](../examples/gitlab-ci/niro-fix.yml) uses a
+  report-only sweep; [`niro-fix.yml`](../examples/gitlab-ci/niro-fix.yml) uses a
   scoped GitLab token to open fix merge requests.
 
-The examples also include commit-range and pull-request or merge-request
-workflows. See [Run Niro in CI](run-niro.md#run-in-ci) for the complete matrix
-and [CI environment](ci-environment.md) for credentials and configuration.
+The examples also include commit-range and human-started pull-request or
+merge-request workflows. See [Run Niro in CI](run-niro.md#run-in-ci) for the
+complete matrix and [CI environment](ci-environment.md) for credentials and
+configuration.
 
 ## Draft a scope
 

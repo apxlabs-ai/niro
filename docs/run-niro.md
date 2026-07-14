@@ -68,6 +68,36 @@ Agent CLI authentication and model selection remain under that CLI's normal
 configuration. See [Supported agents](supported-agents.md) and
 [Model selection](model-selection.md).
 
+## Choose an execution mode
+
+Local `find` and `fix` commands are interactive by default. Niro starts the
+selected agent CLI in the current terminal with Niro's first message already
+submitted. The agent CLI applies its native sandbox and approval policy and
+displays the requests that policy requires; interactive mode does not guarantee
+that every operation prompts.
+
+Use `--autonomous` only when you intentionally want an unattended run:
+
+```bash
+niro find --autonomous --goal "Test authentication and session handling"
+```
+
+Autonomous mode disables agent CLI approval prompts and grants the selected
+agent CLI full current-user host access, including accessible files,
+subprocesses, inherited environment variables, credentials, and normal host
+network egress. Niro never switches to autonomous mode implicitly. A CI or
+other non-interactive process without `--autonomous` exits before Niro
+initializes the repository, starts an agent CLI, or contacts a model provider.
+Read [Agent CLI privileges and threat model](agent-cli-security.md) for the
+exact provider policies, prompt-injection boundary, and safer deployment
+profile.
+
+For autonomous pull-request or merge-request scope, Niro binds the run to the
+checked-out Git `HEAD`, verifies that the live change still has that head, and
+captures its base and head from one forge response. The supplied CI workflows
+check out a reviewed source head and fail if the change moves. Interactive
+local PR/MR runs review the live change in the agent CLI UI.
+
 ## Run locally
 
 Start with a focused report-only run when you want to validate the application
@@ -99,10 +129,14 @@ agent session](supported-agents.md#run-niro-from-an-interactive-developer-agent-
 
 ## Run in CI
 
-CI uses the same `niro find` and `niro fix` commands as a local run. The runner
-needs a container runtime, noninteractive agent CLI authentication, the
-application dependencies, and any Git-provider permissions required by the
-chosen outcome.
+CI uses the same `niro find` and `niro fix` commands as a local run, with an
+explicit `--autonomous` flag. Without it Niro fails before orchestration because
+there is no terminal in which to approve agent CLI actions. The runner needs a
+container runtime, noninteractive agent CLI authentication, the application
+dependencies, and any Git-provider permissions required by the chosen outcome.
+Use an ephemeral, least-privilege runner and a reviewed revision. The supplied
+PR and MR examples require a person to start the autonomous job; they do not
+run merely because untrusted repository content opened or updated a change.
 
 ### GitHub Actions
 
@@ -110,7 +144,7 @@ chosen outcome.
 | --- | --- | --- |
 | Manual whole-application run | [`niro-find.yml`](../examples/github-actions/niro-find.yml) | [`niro-fix.yml`](../examples/github-actions/niro-fix.yml) |
 | Push or commit range | [`niro-find-diff.yml`](../examples/github-actions/niro-find-diff.yml) | [`niro-fix-diff.yml`](../examples/github-actions/niro-fix-diff.yml) |
-| Pull request | [`niro-find-pr.yml`](../examples/github-actions/niro-find-pr.yml) | Use the find workflow |
+| Reviewed pull request (manual) | [`niro-find-pr.yml`](../examples/github-actions/niro-find-pr.yml) | Use the find workflow |
 
 Whole-application and range-based `find` runs publish their report to the job
 summary. The pull-request workflow posts a comment and status using the
@@ -123,7 +157,7 @@ branches and opens new pull requests.
 | --- | --- | --- |
 | Manual whole-application run | [`niro-find.yml`](../examples/gitlab-ci/niro-find.yml) | [`niro-fix.yml`](../examples/gitlab-ci/niro-fix.yml) |
 | Push or commit range | [`niro-find-diff.yml`](../examples/gitlab-ci/niro-find-diff.yml) | [`niro-fix-diff.yml`](../examples/gitlab-ci/niro-fix-diff.yml) |
-| Merge request | [`niro-find-pr.yml`](../examples/gitlab-ci/niro-find-pr.yml) | Use the find workflow |
+| Reviewed merge request (manual) | [`niro-find-pr.yml`](../examples/gitlab-ci/niro-find-pr.yml) | Use the find workflow |
 
 GitLab `find` can report on merge requests, and `fix` opens review-ready merge
 requests through `glab`.

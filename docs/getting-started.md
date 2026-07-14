@@ -52,6 +52,13 @@ Start the selected agent CLI once and complete its normal sign-in flow. Niro doe
 not have a separate login and does not proxy model requests. See
 [Supported agents](supported-agents.md) for local and CI authentication.
 
+Local runs open that agent CLI interactively in the current terminal and submit
+Niro's first message automatically. The CLI applies its own sandbox and
+permission policy, so not every operation necessarily prompts. For an
+intentionally unattended run, `--autonomous` grants full current-user host
+access without approval prompts; CI requires that explicit flag. Read [Agent
+CLI privileges and threat model](agent-cli-security.md) before using it.
+
 ## Run Niro
 
 For a focused first run that tests the complete pentest-to-fix workflow:
@@ -164,3 +171,5 @@ open a pull request, verify the repository remote and Git-provider login, or run
   configuration.
 - [Security and data](security-and-data.md) for the data-flow diagram and
   security FAQ.
+- [Agent CLI security](agent-cli-security.md) for filesystem, command,
+  environment, egress, and prompt-injection boundaries.

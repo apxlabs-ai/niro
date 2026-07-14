@@ -1,11 +1,23 @@
 name: Niro Find (PR)
 
-# Pentest a pull request's diff and post the findings as a PR comment. Unlike
-# the whole-app find workflow, this runs per PR and needs the built-in
-# GITHUB_TOKEN with pull-requests / statuses write — no GitHub App required
-# (the App is only for fix, which pushes branches and opens PRs).
+# Manually pentest a reviewed pull request revision and post the findings as a
+# PR comment. Autonomous agent execution must never start merely because
+# untrusted repository content opened or updated a PR. Dispatch this workflow
+# only after reviewing the revision and trusting it with the model and GitHub
+# credentials exposed to this job. Configure required reviewers on the
+# `niro-autonomous` environment when you want a second approval gate. This
+# tests the reviewed PR head itself, not GitHub's synthetic merge result.
 on:
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Reviewed pull request number to pentest
+        required: true
+        type: number
+      reviewed_head_sha:
+        description: Full head commit SHA that was reviewed
+        required: true
+        type: string
 
 permissions:
   contents: read # read the repo + PR diff
@@ -13,30 +25,60 @@ permissions:
   statuses: write # set the Security / Niro commit status
 
 concurrency:
-  group: niro-find-pr-${{ github.event.pull_request.number }}
+  group: niro-find-pr-${{ inputs.pr_number }}
   cancel-in-progress: true
 
 jobs:
   find:
     name: Pentest the PR and comment findings
-    # Same-repository, non-Dependabot PRs only. Fork PRs don't receive the
-    # provider secrets and get read-only permissions (and running Niro on
-    # untrusted fork code with secrets is a security risk); Dependabot PRs push a
-    # same-repo branch but GitHub still gives them a read-only token and no
-    # secrets. Use a reviewed pull_request_target flow if you need those.
-    if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'dependabot[bot]'
+    environment: niro-autonomous
     runs-on: ubuntu-latest
     timeout-minutes: 300
 
     steps:
+      - name: Verify reviewed PR head
+        id: review
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_ENTERPRISE_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          REVIEWED_HEAD_SHA: ${{ inputs.reviewed_head_sha }}
+        run: |
+          if [[ ! "$REVIEWED_HEAD_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "::error::reviewed_head_sha must be a full 40-character commit SHA"
+            exit 1
+          fi
+          repo_host="${GITHUB_SERVER_URL#https://}"
+          repo_host="${repo_host#http://}"
+          pr_json="$(gh pr view "$PR_NUMBER" \
+            --repo "${repo_host}/${GITHUB_REPOSITORY}" \
+            --json headRefOid)"
+          current_head="$(jq -r .headRefOid <<<"$pr_json")"
+          if [[ "${current_head,,}" != "${REVIEWED_HEAD_SHA,,}" ]]; then
+            echo "::error::PR #${PR_NUMBER} moved: reviewed ${REVIEWED_HEAD_SHA}, current ${current_head}"
+            exit 1
+          fi
+          echo "head_sha=$current_head" >> "$GITHUB_OUTPUT"
+
       - name: Check out repository
         uses: actions/checkout@v6
         with:
-          # Full history + persisted credentials so Niro can build the PR diff
-          # (git fetch/diff of base..head) using the built-in GITHUB_TOKEN.
+          # The workflow definition comes from the trusted default branch; only
+          # this explicit step checks out the immutable, verified PR head.
+          ref: ${{ steps.review.outputs.head_sha }}
           fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure read-only Git fetch authentication
+        shell: bash
+        run: |
+          # Niro fetches the PR's captured base/head SHAs with plain git.
+          # Delegate those requests to gh without storing the token value. This
+          # helper is repository-local; GITHUB_TOKEN has contents: read only.
+          git config --local --add credential.helper ""
+          git config --local --add credential.helper "!gh auth git-credential"
+          git config --local credential.useHttpPath true
 
       - name: Install Niro
         shell: bash
@@ -48,14 +90,28 @@ jobs:
         shell: bash
         env:
           # gh reads GH_TOKEN to fetch the PR and post the findings comment;
-          # GH_ENTERPRISE_TOKEN is the same for GitHub Enterprise Server hosts.
+          # the repo-local git helper reads it for private-repository fetches.
+          # GH_ENTERPRISE_TOKEN is the same for Enterprise Server hosts.
           GH_TOKEN: ${{ github.token }}
           GH_ENTERPRISE_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          REVIEWED_HEAD_SHA: ${{ steps.review.outputs.head_sha }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
+          repo_host="${GITHUB_SERVER_URL#https://}"
+          repo_host="${repo_host#http://}"
+          pr_json="$(gh pr view "$PR_NUMBER" \
+            --repo "${repo_host}/${GITHUB_REPOSITORY}" \
+            --json headRefOid)"
+          current_head="$(jq -r .headRefOid <<<"$pr_json")"
+          if [[ "$current_head" != "$REVIEWED_HEAD_SHA" ]]; then
+            echo "::error::PR #${PR_NUMBER} moved to ${current_head} after checkout; review and dispatch again"
+            exit 1
+          fi
           niro find \
-            --pr-number="${{ github.event.pull_request.number }}" \
+            --autonomous \
+            --pr-number="${{ inputs.pr_number }}" \
             --agent=claude \
             --config-dir=niro \
             --include-findings=true \

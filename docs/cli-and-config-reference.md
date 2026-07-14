@@ -65,13 +65,22 @@ Use at most one scope mode.
 mutually exclusive. Outside CI, a command with no selector runs a
 whole-application test. GitHub Actions and GitLab CI reject a command with no
 selector; CI must provide an explicit goal, commit range, or pull-request or
-merge-request scope.
+merge-request scope and must pass `--autonomous`.
+
+For an autonomous pull-request or merge-request run, Niro reads the checked-out
+Git `HEAD` and verifies that it is still the change's current head. It captures
+the base and head together from that forge response, diffs those commits,
+excludes mutable PR/MR title and description text from the attacker agent's
+artifacts, and posts commit statuses to the captured head. The caller supplies
+only `--pr-number`; use the ready-to-copy CI workflows to check out a reviewed
+source head safely.
 
 ### Common flags
 
 | Flag | Default | Effect |
 | --- | --- | --- |
 | `--agent=claude|codex|copilot` | `claude` | Select the installed agent CLI for this command |
+| `--autonomous` | `false` | Grant full current-user host access without agent CLI approval prompts; required in CI and other non-interactive environments |
 | `--config-dir=<dir>` | `niro` | Select the repository-relative environment profile |
 | `--url=<absolute-url>` | None | Use this existing HTTP or HTTPS runtime; without it Niro starts the current checkout |
 | `--include-findings[=true|false]` | `true` | Include finding proof bundles in the published knowledge artifact |
@@ -80,6 +89,13 @@ merge-request scope.
 An existing-runtime URL must be absolute, use HTTP or HTTPS, and match a host
 and port authorized by the selected `scope.yaml`. It selects the runtime but
 does not authorize it.
+
+Without `--autonomous`, Niro launches the selected agent CLI's interactive
+terminal interface and automatically submits the first message. If CI is
+detected or stdin/stdout are not terminals, Niro exits before orchestration
+rather than granting unattended authority implicitly. See [Agent CLI
+privileges and threat model](agent-cli-security.md) for filesystem, process,
+environment, egress, and repository-instruction boundaries.
 
 `niro find` never creates fix branches, commits, or pull requests. `niro fix`
 can create those changes but never merges them.
@@ -237,8 +253,12 @@ The approved harness should generate these files for each run.
 
 ### `credentials.yaml`
 
-The top-level key is `credentials`. Every entry requires `description` and
-`type`. Supported types and additional fields are:
+The top-level key is `credentials`. Every entry requires a unique
+`credential_id`, `description`, and `type`. `credential_id` must match
+`^[A-Z][A-Z0-9_]{0,63}$`. Keep the ID stable when rotating a value or editing
+its description.
+
+Supported types and additional fields are:
 
 | Type | Required fields | Optional fields |
 | --- | --- | --- |
@@ -250,7 +270,13 @@ The top-level key is `credentials`. Every entry requires `description` and
 
 Values are literal; Niro does not expand environment-variable references in
 this file. Keep environment selection, login shape, effective permissions, and
-credential usage in the description. Use the generated
+credential usage in the description. Niro exposes the non-secret `identifier`
+as `<CREDENTIAL_ID>_IDENTIFIER`, hides scalar authentication material behind
+`<CREDENTIAL_ID>_SECRET`, and exposes private-key paths as
+`<CREDENTIAL_ID>_KEY_PEM_FILE`. For mTLS, the certificate and optional CA paths
+are `<CREDENTIAL_ID>_CERT_PEM_FILE` and `<CREDENTIAL_ID>_CA_PEM_FILE`.
+
+Use the generated
 [`credentials.yaml.example`](../examples/niro-config/credentials.yaml.example)
 as the canonical format reference.
 

@@ -3,6 +3,15 @@
 This page documents the environment variables and secrets used by Niro CI
 workflows.
 
+Every CI invocation of `niro find` or `niro fix` must pass `--autonomous`.
+Without that explicit grant, Niro exits before repository initialization,
+agent CLI execution, or model-provider access because no interactive terminal
+is available for approvals. The flag grants full current-user host access
+without agent CLI approval prompts. Use an ephemeral, least-privilege runner,
+expose only required secrets, and run only a revision reviewed for autonomous
+execution. See [Agent CLI privileges and threat
+model](agent-cli-security.md). The ready-to-copy workflows include the flag.
+
 ## Model selection
 
 Niro does not set the developer agent's model. Use the selected agent CLI's
@@ -23,11 +32,32 @@ Add the secret for the agent CLI you run (`--agent`, default `claude`).
 
 ### GitHub Pull Requests
 
-Only needed for workflows that **create fix PRs** (`niro-fix.yml`,
-`niro-fix-diff.yml`). PR-scoped find (`niro-find-pr.yml`) only reads the PR and
-posts a comment, which it does with the workflow's built-in `GITHUB_TOKEN`
+PR-scoped find (`niro-find-pr.yml`) is manually dispatched with the PR number
+and full reviewed head commit SHA. It verifies that head against the PR and
+checks it out. The Niro process reads the checkout's `HEAD`, verifies it against
+the live PR, and captures the PR's base and head from that same forge response.
+Niro excludes mutable PR title/body text from the autonomous run and posts the
+merge-gate status to the captured head. The workflow posts its comment with the
+built-in `GITHUB_TOKEN`
 (grant `contents: read` + `pull-requests` / `statuses: write` — a `permissions:`
 block defaults every unlisted scope to `none`) — no App required.
+For private repositories, a repository-local `gh auth git-credential` helper
+authenticates Niro's read-only Git fetches without storing the token in Git
+configuration.
+
+Copy GitHub's current head before dispatching the PR workflow:
+
+```bash
+gh pr view <number> --json headRefOid --jq .headRefOid
+```
+
+The example uses a `niro-autonomous` GitHub environment. Configure required
+reviewers on that environment when you want an approval in addition to the
+manual dispatch. Do not replace the example with an automatic
+`pull_request_target` job that checks out PR code while exposing secrets.
+
+The GitHub App credentials below are needed only for workflows that create fix
+PRs (`niro-fix.yml`, `niro-fix-diff.yml`).
 
 Niro authenticates to GitHub through a GitHub App rather than a personal
 access token, so authentication does not expire during a long fix run. Create
@@ -61,6 +91,22 @@ To create the App:
 No other configuration is required: `NIRO_APP_CLIENT_ID` (the App ID on GHES)
 and `NIRO_APP_PRIVATE_KEY` are all Niro needs for both github.com and GitHub
 Enterprise Server.
+
+### GitLab Merge Requests
+
+The supplied MR-scoped find job appears only in merge-request pipelines and is
+`manual`. Start it after reviewing the selected revision. The job exposes
+`GITLAB_TOKEN` and the selected model credential to autonomous execution, so
+keep those variables masked, least-privilege, and unavailable to untrusted
+forks. Before Niro starts, the job verifies the pipeline's source head against
+the MR and checks out that commit; a stale manually started pipeline fails
+instead of testing or marking the current MR head. Niro then verifies its
+checkout against the live MR head and derives the base from that same forge
+response. Standard and merged-result pipelines both test the MR source head;
+for a merged-result pipeline the job replaces GitLab's temporary merge-commit
+checkout with the source revision before Niro starts. Merge-train pipelines are
+rejected because their temporary commit can contain other queued MRs. Do not
+change the job to automatic execution for arbitrary MR content.
 
 ### Claude
 

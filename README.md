@@ -43,7 +43,7 @@ pentester needs another test tenant, back to eng. A finding won't reproduce, it
 ping-pongs between security and dev. A fix ships, security has to re-test. Weeks
 pass, a dozen people touch it, and the code has already moved on.
 
-**Niro collapses that relay into one autonomous run.** Its **attacker agent**
+**Niro collapses that relay into one agent-driven run.** Its **attacker agent**
 does the security team's job, its **developer agent** does the dev team's — and
 it *automates the setup* engineering used to own. You still set the scope,
 review the diffs, and decide what merges; Niro handles the back-and-forth in
@@ -60,8 +60,13 @@ curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | s
 niro fix
 ```
 
-That's it. `niro fix` runs the end-to-end workflow and opens review-ready fix
-PRs. You decide what to merge.
+`niro fix` opens the selected agent CLI interactively with Niro's first message
+already submitted. The agent CLI applies its own sandbox and approval policy;
+not every operation necessarily prompts. For an intentionally unattended run,
+`--autonomous` grants the agent CLI full current-user host access without
+approval prompts. Read the [agent CLI privilege and threat
+model](docs/agent-cli-security.md) before using it. Niro opens review-ready fix
+PRs; you decide what to merge.
 
 See [Run Niro](docs/run-niro.md) for report-only and scoped runs, supported
 agent CLIs, CI, and interactive developer agent workflows.
@@ -91,6 +96,10 @@ trust back:
   require uploading your repository, credentials, findings, or logs to a Niro
   backend. See [Security and data](docs/security-and-data.md) for AI-provider
   boundaries, telemetry, and opt-out controls.
+- **Host authority is explicit.** Local runs are interactive by default;
+  unattended execution requires `--autonomous` and the full host authority it
+  grants is documented in the [agent CLI threat
+  model](docs/agent-cli-security.md).
 - **You set the blast radius.** Attack tools run in a sandbox with kernel-level
   egress control — they can reach *only* the targets you authorize in
   `scope.yaml`, enforced at the network layer.
@@ -114,6 +123,9 @@ compliance, deployment, and commercial support.
   validation evidence, and fix PRs.
 - **[Security and data](docs/security-and-data.md)** — data flow, AI providers,
   sandboxing, egress, and telemetry.
+- **[Agent CLI security](docs/agent-cli-security.md)** — filesystem, command,
+  environment, egress, and prompt-injection boundaries for interactive and
+  autonomous execution.
 - **[Security policy](SECURITY.md)** — supported versions and private
   vulnerability reporting.
 - **[Releases and verification](docs/releases-and-verification.md)** — support

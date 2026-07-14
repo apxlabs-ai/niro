@@ -111,6 +111,22 @@ If a pinned model is rejected, remove the corresponding `models.high`,
 `models.medium`, or `models.low` override and let Niro select the default. An
 explicit model identifier is passed to the agent CLI exactly as written.
 
+## The selected agent CLI is too old for the chosen model
+
+The error reports the installed agent CLI version and the minimum required by
+the effective native model. Upgrade the selected agent CLI through its
+provider-supported update flow, then confirm the new version before retrying:
+
+```bash
+claude --version        # or: codex --version / copilot --version
+```
+
+If an immediate upgrade is not possible, pin the tier to an older model that
+the installed agent CLI supports. Single-session commands such as draft and
+triage validate only the tier they launch; a pentest can use all three tiers,
+so each configured pentest tier must be compatible. Model overrides are exact
+identifiers—see [Model selection](model-selection.md) before changing one.
+
 ## Configuration cannot be loaded
 
 Niro rejects unknown YAML keys, invalid values, and unsupported schema versions.
@@ -247,12 +263,17 @@ Confirm all of the following:
 
 - `origin` points to the expected GitHub or GitLab repository;
 - `--pr-number` is the GitHub PR number or GitLab MR IID;
+- for an autonomous PR/MR run, the checkout's `HEAD` is the current PR/MR head
+  (the supplied workflows check out and verify it automatically);
 - `gh auth status` or `glab auth status` succeeds for that host;
 - the authenticated identity can read the private repository and change; and
 - the checkout contains the repository metadata Niro needs.
 
 Pull-request and merge-request mode is supported by `niro find`, not
 `niro fix`. Use a commit range with `fix` when remediation changes are required.
+If Niro reports that the checked-out head does not match the current change,
+review the new revision and start a new workflow run rather than reusing the
+stale one.
 
 ## A fix run does not open a pull request
 

@@ -57,6 +57,7 @@ jobs:
         # branch — guard or pin a base there).
         run: |
           niro fix \
+            --autonomous \
             --base-sha="${{ github.event.before }}" \
             --head-sha="${{ github.sha }}" \
             --agent=claude \

@@ -7,6 +7,12 @@
 # Configure either ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN as a masked
 # CI/CD variable.
 
+# GitLab.com shared runners (docker:dind) work out of the box: Niro detects the
+# docker:dind topology and reaches its scanners over the daemon-published port,
+# secured with a mandatory per-run control token, and keeps its own cache/logs
+# in a job-scoped dir on the runner build root (outside your repository)
+# automatically. No extra runner setup is needed.
+
 stages:
   - security
 
@@ -33,6 +39,7 @@ niro-find-diff:
   script:
     - |
       niro find \
+        --autonomous \
         --base-sha="$CI_COMMIT_BEFORE_SHA" \
         --head-sha="$CI_COMMIT_SHA" \
         --agent=claude \

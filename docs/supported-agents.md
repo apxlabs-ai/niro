@@ -37,6 +37,11 @@ runs, Niro can install a missing agent CLI from its official npm package when
 npm is available. Install it yourself first when you need to control the agent
 CLI version or installation method.
 
+This requirement applies to Claude Code, Codex, and Copilot CLI equally. Niro
+uses the `PATH` inherited by its process and does not scan common installation
+directories or select an SDK-bundled CLI. When an MCP client launches Niro,
+ensure that client passes a `PATH` containing its agent CLI executable.
+
 ## Run with your agent CLI
 
 Use the same `--agent` flag with `niro find` or `niro fix`:
@@ -53,6 +58,33 @@ niro fix --agent=copilot
 ```
 
 For a report-only run, replace `fix` with `find`.
+
+## Choose interactive or autonomous execution
+
+Turnkey local runs are interactive by default. Niro launches the selected agent
+CLI in the current terminal and automatically submits the first message:
+
+```bash
+niro find --goal "Test the login flow"
+```
+
+Claude Code, Codex, or Copilot CLI then displays its native permission requests.
+The user can approve, deny, or steer the session before control returns to Niro.
+
+Pass `--autonomous` to run without those approval prompts:
+
+```bash
+niro find --autonomous --goal "Test the login flow"
+```
+
+Autonomous mode grants the selected agent CLI the unattended execution
+authority documented by that product, including the ability to run project
+commands with full current-user host access. Niro does not enable it from
+repository configuration or infer it from CI. CI and other non-interactive
+environments must pass `--autonomous` explicitly or Niro exits before
+orchestration. See [Agent CLI privileges and threat
+model](agent-cli-security.md) for the exact provider mechanisms and
+non-controls.
 
 The agent CLI and the model provider are separate choices:
 

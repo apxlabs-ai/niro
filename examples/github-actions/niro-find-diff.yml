@@ -1,7 +1,7 @@
 name: Niro Find (diff)
 
-# Pentest what changed in a push (base..head) and report the findings to the
-# job summary. Read-only on the repo — no token, no GitHub App.
+# Pentest what changed in a push (base..head) and report the findings to the job
+# summary. Report-only, with no Git write credential or GitHub App.
 # Branch-scoped so tag pushes (which have no base to diff) don't trigger it.
 on:
   push:
@@ -47,6 +47,7 @@ jobs:
         # branch — guard or pin a base there).
         run: |
           niro find \
+            --autonomous \
             --base-sha="${{ github.event.before }}" \
             --head-sha="${{ github.sha }}" \
             --agent=claude \

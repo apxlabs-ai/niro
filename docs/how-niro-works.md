@@ -24,7 +24,9 @@ residual risk.
 Two commands put the attacker agent and developer agent to work:
 
 - **`niro find`** runs the attacker agent alone: it pentests your app and writes a
-  proven-findings report. Read-only — it never touches your code.
+  proven-findings report. It does not create fix branches, commits, or pull
+  requests, but the selected agent CLI can still prepare the application and
+  write local state. See the [agent CLI privilege model](agent-cli-security.md).
 - **`niro fix`** runs the *same* pentest, then has the developer agent address
   every confirmed finding: one pull request per root cause, each carrying its
   patch and validation evidence.

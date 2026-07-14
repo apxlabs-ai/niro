@@ -35,6 +35,21 @@ The Niro CLI, developer agent, and attacker agent run on your workstation or CI
 runner. The attacker agent executes command-line and browser interactions
 through a Docker or Podman sandbox running in your environment.
 
+### How are agent CLI actions approved?
+
+Local `niro find` and `niro fix` commands launch the selected agent CLI
+interactively by default. Niro submits the initial message, and the agent CLI
+shows its native permission requests in the same terminal.
+
+`--autonomous` explicitly selects unattended execution without those approval
+prompts. In that mode, commands inherit the permissions of the OS user running
+Niro, including that user's accessible files, processes, credentials, and
+network. CI and other non-interactive environments must pass the flag; Niro
+does not turn it on automatically. [Agent CLI privileges and threat
+model](agent-cli-security.md) documents the exact provider invocations,
+environment inheritance, host egress, repository prompt-injection boundary,
+and the difference between `find` and `fix`.
+
 ### Where can my code and data go?
 
 Depending on the command and your configuration, data can go directly to:
@@ -62,6 +77,10 @@ use, retention, residency, and access settings apply.
 For normal attack execution, the sandbox uses default-deny outbound networking.
 It can resolve and connect only to the hosts or CIDRs and ports allowed in
 `niro/scope.yaml`; explicit exclusions take precedence.
+
+This restriction applies to target-facing tools in the attack-tool sandbox,
+not to the host-side agent CLI or its subprocesses. Niro does not filter their
+host network egress.
 
 Scope controls network destinations, not HTTP paths, methods, tenants, or
 actions within an authorized host and port. Use dedicated test environments and

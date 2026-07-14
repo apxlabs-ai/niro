@@ -48,7 +48,7 @@ your agent CLI's provider accepts — the same name you'd pass to that CLI's own
 Copilot needs a little more care if you pin a name:
 
 - **Identifier form depends on your auth path.** Native Copilot OAuth expects
-  dot-form (`claude-opus-4.7`); BYOK expects hyphen-form (`claude-opus-4-7`).
+  dot-form (`claude-opus-4.8`); BYOK expects hyphen-form (`claude-opus-4-8`).
   When unsure, omit the override and let Niro pick the right form.
 - **BYOK is all-or-nothing.** It activates only when all three
   `COPILOT_PROVIDER_TYPE`, `COPILOT_PROVIDER_BASE_URL`, and
