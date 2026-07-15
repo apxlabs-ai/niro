@@ -47,6 +47,7 @@ jobs:
       # This workflow uses Claude Code. To use Codex or Copilot CLI instead:
       # https://github.com/apxlabs-ai/niro/blob/main/docs/supported-agents.md#authenticate-in-ci
       - name: Run Niro
+        id: niro
         shell: bash
         env:
           NIRO_APP_CLIENT_ID: ${{ secrets.NIRO_APP_CLIENT_ID }}
@@ -56,14 +57,22 @@ jobs:
         # github.event.before is the prior branch head (all-zeros on a brand-new
         # branch — guard or pin a base there).
         run: |
+          report_log="$(mktemp)"
+          set +e
           niro fix \
             --autonomous \
             --base-sha="${{ github.event.before }}" \
             --head-sha="${{ github.sha }}" \
             --agent=claude \
             --config-dir=niro \
+            --generate-report \
             --include-findings=true \
-            --upload-debug-logs=false
+            --upload-debug-logs=false 2>&1 | tee "$report_log"
+          niro_status="${PIPESTATUS[0]}"
+          set -e
+          report_path="$(sed -n 's/^niro: report: //p' "$report_log" | tail -n 1)"
+          echo "report_path=$report_path" >> "$GITHUB_OUTPUT"
+          exit "$niro_status"
 
       - name: Upload Niro knowledge
         if: always()
@@ -71,6 +80,15 @@ jobs:
         with:
           name: niro-knowledge
           path: niro-knowledge.tar
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload Niro penetration-test report
+        if: always() && steps.niro.outputs.report_path != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: niro-pentest-report
+          path: ${{ steps.niro.outputs.report_path }}
           if-no-files-found: ignore
           retention-days: 30
 

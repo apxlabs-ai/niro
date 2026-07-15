@@ -15,6 +15,14 @@ you need the evidence behind a finding or are deciding whether to merge a fix.
 The final terminal message also names the result locations produced by that
 run. A run that ended before the handoff may have no findings summary.
 
+When the run generated a report, the terminal also prints
+`niro: report: <path>`. That PDF is a customer-facing snapshot of the final
+agreed finding set; it supplements the shorter summary. A finding remains in
+the PDF when the developer agent agrees it should be reported, even if a `fix`
+run created or verified remediation for it. Niro writes the PDF to a temporary
+directory outside the Git checkout, and the supplied CI workflows publish it as
+the `niro-pentest-report` artifact.
+
 The summary is deliberately short. It tells you:
 
 - what an attacker can do for each proven finding;

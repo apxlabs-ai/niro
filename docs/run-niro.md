@@ -123,6 +123,34 @@ the workspace can contain `niro-summary.md`, `niro-knowledge.tar`, and optional
 debug bundles. `fix` can also create remote branches and pull requests. See
 [Review the results](review-results.md) for the review workflow.
 
+## Generate a customer PDF
+
+`niro find` generates a customer-facing penetration-test report by default.
+`niro fix` generates one only when explicitly requested:
+
+```bash
+niro find --goal "Test authentication and session handling"
+niro fix --goal "Test authentication and session handling" --generate-report
+```
+
+To run `find` without a PDF, pass `--generate-report=false`.
+
+Niro reconciles finding verdicts first, generates exactly one PDF from the final
+canonical state, and prints its absolute path as `niro: report: <path>`. A
+report finding is exactly a finding the developer agent agrees should be
+reported. Findings covered by accepted behavior are deleted and disputes are
+finished before generation. Creating or verifying a fix does not remove an
+agreed finding: `find` and `fix` reports use the same inclusion rule even though
+only `fix` prepares remediation changes. In `fix`, verified-fix deletions happen
+after the PDF succeeds so the report retains the agreed finding set while Niro's
+final canonical state is still synchronized.
+
+The PDF is written to a Niro-owned temporary directory outside the Git checkout,
+so report generation does not add an untracked repository file. Copy it to
+durable storage when running locally. The supplied CI examples request the PDF
+and publish it as a job artifact. If the report was requested but no valid PDF
+was produced, the command fails.
+
 To invoke Niro from inside an interactive developer agent session instead of
 using the turnkey commands, follow [Run Niro from an interactive developer
 agent session](supported-agents.md#run-niro-from-an-interactive-developer-agent-session).
@@ -146,8 +174,8 @@ run merely because untrusted repository content opened or updated a change.
 | Push or commit range | [`niro-find-diff.yml`](../examples/github-actions/niro-find-diff.yml) | [`niro-fix-diff.yml`](../examples/github-actions/niro-fix-diff.yml) |
 | Reviewed pull request (manual) | [`niro-find-pr.yml`](../examples/github-actions/niro-find-pr.yml) | Use the find workflow |
 
-Whole-application and range-based `find` runs publish their report to the job
-summary. The pull-request workflow posts a comment and status using the
+Whole-application and range-based `find` runs publish their findings summary to
+the job summary. The pull-request workflow posts a comment and status using the
 built-in `GITHUB_TOKEN`. `fix` needs GitHub App credentials because it pushes
 branches and opens new pull requests.
 

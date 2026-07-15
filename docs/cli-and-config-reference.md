@@ -84,6 +84,7 @@ source head safely.
 | `--config-dir=<dir>` | `niro` | Select the repository-relative environment profile |
 | `--url=<absolute-url>` | None | Use this existing HTTP or HTTPS runtime; without it Niro starts the current checkout |
 | `--include-findings[=true|false]` | `true` | Include finding proof bundles in the published knowledge artifact |
+| `--generate-report[=true|false]` | `find`: `true`; `fix`: `false` | Generate one customer PDF from the final canonical pentest state |
 | `--upload-debug-logs[=true|false]` | `false` | Create a sensitive debug-log bundle for intentional diagnostics |
 
 An existing-runtime URL must be absolute, use HTTP or HTTPS, and match a host
@@ -99,6 +100,17 @@ environment, egress, and repository-instruction boundaries.
 
 `niro find` never creates fix branches, commits, or pull requests. `niro fix`
 can create those changes but never merges them.
+
+`niro find` generates the PDF by default; pass `--generate-report=false` to opt
+out. `niro fix` generates it only when `--generate-report` is present. The PDF
+is written to a Niro-owned temporary directory outside the repository, and its
+absolute path is printed as `niro: report: <path>`. Niro generates it only after
+the developer agent has reconciled the final agreed finding set: findings
+covered by accepted behavior are deleted and disputes are finished. Creating or
+verifying a fix does not remove an agreed finding from the report. In `fix`,
+deletion of verified fixes is deferred until the PDF succeeds, then completed
+before cleanup. The command fails when an enabled PDF is not produced or is
+invalid.
 
 ## Draft network scope
 
