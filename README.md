@@ -7,7 +7,7 @@
 
 # Niro Community Edition
 
-> Finds the security bug. Ships the fix.
+> Finds security bugs. Ships fixes.
 
 [![Latest stable release](https://img.shields.io/github/v/release/apxlabs-ai/niro)](https://github.com/apxlabs-ai/niro/releases/latest)
 
