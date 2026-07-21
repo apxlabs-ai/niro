@@ -320,23 +320,41 @@ Niro writes JSON-lines logs under the operating-system cache directory:
 | Linux | `~/.cache/niro/logs` |
 | Windows | `%LocalAppData%\niro\logs` |
 
-The primary files are:
+The primary files are split by writer — the host `niro` process and the
+in-container `niro-agent` process each own their files, so neither can corrupt
+the other's:
 
 | File | Contents |
 | --- | --- |
-| `niro-cli.jsonl` | Host CLI, agent CLI launch, and subprocess activity |
-| `niro-agent.jsonl` | Attack-tool service and tool activity inside the sandbox |
-| `niro-security.jsonl` | Environment authorization, DNS, scope, and firewall decisions |
+| `niro-activity.host.jsonl` | Operational activity from the host `niro` CLI — agent CLI launch, subprocess, orchestration. |
+| `niro-activity.sandbox.jsonl` | Operational activity inside the sandbox — attack-tool and tool execution against your target. |
+| `niro-security.host.jsonl` | Host-side environment authorization decisions. |
+| `niro-security.sandbox.jsonl` | Sandbox-side DNS, scope, and firewall decisions. |
+
+Every record still carries an `origin` field (`host` or `sandbox`). For a single
+unified "what did Niro do?" view, merge the activity files at read time:
+
+```bash
+cat ~/Library/Caches/niro/logs/niro-activity.*.jsonl | jq -s 'sort_by(.time)[]'
+```
 
 Filter one run by its `pentest_id` when `jq` is available:
 
 ```bash
 jq -c 'select(.pentest_id == "<pentest-id>")' \
-  ~/Library/Caches/niro/logs/niro-security.jsonl
+  ~/Library/Caches/niro/logs/niro-security.*.jsonl
 ```
 
 Set `log_level: debug` only for a deliberate diagnostic run. Security-boundary
 records remain available regardless of the operational log level.
+
+If you upgraded from an older Niro, you may still see `niro-activity.jsonl` /
+`niro-security.jsonl` (the older merged files) or their rotated backups in the
+log directory. Niro does not delete them automatically — during an upgrade it
+can't be sure an older process isn't still writing one, and unlinking an open
+log would lose records. Once all host `niro` processes and reattachable legacy
+attack-tool sandbox containers are stopped, these leftovers are safe to remove
+by hand.
 
 ## Create a debug bundle intentionally
 

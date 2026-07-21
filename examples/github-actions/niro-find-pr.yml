@@ -138,8 +138,8 @@ jobs:
         if: always() && steps.niro.outputs.report_path != ''
         uses: actions/upload-artifact@v7
         with:
-          name: niro-pentest-report
           path: ${{ steps.niro.outputs.report_path }}
+          archive: false
           if-no-files-found: ignore
           retention-days: 30
 

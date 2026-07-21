@@ -138,7 +138,7 @@ version: 1
 #     # the section entirely if you don't have one.
 #     #
 #     # Exact POSIX names ([A-Z_][A-Z0-9_]*); no globs or prefixes. Each name
-#     # Niro reads is recorded in niro-security.jsonl (env_authorized).
+#     # Niro reads is recorded in niro-security.host.jsonl (env_authorized).
 #     access:
 #       - MY_GATEWAY_API_KEY             # key for a self-hosted model gateway
 #       - MY_PROVIDER_TOKEN              # a custom provider credential

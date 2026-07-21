@@ -58,7 +58,7 @@ Commit the setting so every developer and CI run inherits the opt-out.
 
 When Niro reads that configuration for `start_pentest`, it writes a
 `telemetry_disabled` record with the selected `niro.yaml` path to
-`niro-cli.jsonl`. Niro does not report telemetry as enabled during
+`niro-activity.host.jsonl`. Niro does not report telemetry as enabled during
 `niro serve` startup because no project configuration has been selected yet.
 
 Telemetry is controlled per Niro configuration. If a repository uses separate

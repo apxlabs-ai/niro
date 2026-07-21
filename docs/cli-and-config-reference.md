@@ -34,13 +34,23 @@ niro init [<project-dir>] [flags]
 | Flag | Value | Default | Effect |
 | --- | --- | --- | --- |
 | `--agent` | `claude`, `codex`, or `copilot` | All supported agent CLIs | Install integration files only for the selected agent CLI |
-| `--hooks` | Boolean | `false` | Install supported push-trigger hooks for the selected agent CLIs |
 | `--config-dir` | Repository-relative path | `niro` | Create a separate environment profile such as `niro-staging` |
 | `--quiet` | Boolean | `false` | Print only the result and warnings; useful in automation |
 
-Initialization never overwrites existing files. Re-running it reports existing
-files as skipped. `niro find` and `niro fix` initialize the default project
-automatically when Niro will start the application. Initialize explicitly when
+Each agent CLI's hook config is installed automatically (`.claude/settings.json`,
+`.codex/hooks.json`, `.github/hooks/niro.json`). The hooks feed Niro's run ledger —
+a silent record of each session's tool calls and lifecycle — so `niro` must be on
+your `PATH` for them to fire.
+
+Initialization never discards your own content. Files it fully owns are reported
+as skipped when already present. The hook configs are the exception, so a re-run
+can add lifecycle hooks a prior init was missing: Niro merges its own entries
+into an existing `.claude/settings.json` or `.codex/hooks.json` (preserving your
+other settings and hooks), and refreshes the Niro-owned `.github/hooks/niro.json`
+for Copilot. Re-running once everything is current reports skipped. `niro find`
+and `niro fix` initialize the
+default project automatically when Niro will start the application. Initialize
+explicitly when
 you need an alternate profile or will test an existing runtime with `--url`.
 
 ## Find and fix

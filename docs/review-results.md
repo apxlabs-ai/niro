@@ -20,8 +20,9 @@ When the run generated a report, the terminal also prints
 agreed finding set; it supplements the shorter summary. A finding remains in
 the PDF when the developer agent agrees it should be reported, even if a `fix`
 run created or verified remediation for it. Niro writes the PDF to a temporary
-directory outside the Git checkout, and the supplied CI workflows publish it as
-the `niro-pentest-report` artifact.
+directory outside the Git checkout. The supplied GitHub Actions workflows upload
+the PDF directly as a single-file artifact named after the report, so it needs
+no archive extraction after download.
 
 The summary is deliberately short. It tells you:
 
@@ -38,16 +39,23 @@ is whether the described attacker capability matters in your deployment.
 
 Local runs write `niro-knowledge.tar` when there is reusable configuration or
 finding evidence to preserve. The GitHub and GitLab examples publish the same
-file as a CI artifact. List its contents before extracting it:
+file as a CI artifact. It contains the latest full committable Niro
+configuration snapshot, even when those files did not change during the run.
+List its contents before extracting it:
 
 ```bash
 tar -tf niro-knowledge.tar
 ```
 
-The archive can also contain committable Niro configuration changes, including
-updates to accepted-behavior and coverage-gap registers. It excludes raw
-credentials, fixtures, and harness runtime state. Setting
-`--include-findings=false` also excludes finding proof bundles.
+Compare the snapshot with another checkout using Git without changing either
+directory:
+
+```bash
+git diff --no-index -- ./niro /path/to/snapshot/niro
+```
+
+The archive excludes raw credentials, fixtures, and harness runtime state.
+Setting `--include-findings=false` also excludes finding proof bundles.
 
 Each proven finding is stored under:
 
