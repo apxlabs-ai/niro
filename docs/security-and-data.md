@@ -120,8 +120,8 @@ execution service.
 ### What telemetry does Niro collect?
 
 Telemetry is enabled by default. Niro sends one event when a pentest completes
-or fails. It contains pseudonymous identifiers, environment metadata, duration
-and cost, severity counts, and coverage-gap counts.
+or fails. It contains pseudonymous identifiers, environment metadata, duration,
+severity counts, and coverage-gap counts.
 
 It does not contain source code, prompts, credentials, target URLs, raw HTTP
 traffic, finding text, exploit payloads, or logs. Disable it per project:
@@ -136,11 +136,14 @@ See [Telemetry](telemetry.md) for the complete event schema and endpoint.
 
 - Temporary captures and exploit work stay in the sandbox workspace and are
   removed with the container.
-- Credentials, fixtures, finding proofs, and run state stay in local `niro/`
-  paths that are added to `.gitignore`.
+- Credentials, fixtures, finding proofs, run state, and terminal artifacts stay
+  in local `niro/` paths that are added to `.gitignore`.
 - CLI, attack-tool, and security logs are written to Niro's operating-system
   cache directory on your host.
-- Summaries and knowledge or debug bundles are written to your workspace.
+- Terminal summaries, reports, and bundles are colocated under
+  `<config-dir>/artifacts/`; its `manifest.json` records only files produced by
+  the latest run. Current workflow examples also retain workspace compatibility
+  copies for upload.
 - Branches, pull requests, comments, and statuses are stored by your Git
   provider when those features are used.
 - CI artifacts are uploaded only when your workflow is configured to publish

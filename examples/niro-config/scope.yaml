@@ -3,6 +3,10 @@
 # The network destinations Niro is authorized to test. Anything not listed is
 # denied by the attack sandbox's network policy.
 #
+# The sandbox firewall is compiled from this file once, at pentest start. Editing
+# targets mid-pentest has no effect until the NEXT pentest — close_pentest, then
+# start again to apply the change.
+#
 # Use one Niro config per environment. Keeping local, staging, and production
 # targets in separate config directories prevents a run from selecting the
 # wrong environment. For example, keep `niro/` and `niro-staging/` separate and

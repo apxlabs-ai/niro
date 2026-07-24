@@ -16,7 +16,7 @@ Every pentest that reaches a terminal state emits one event with these fields:
 | --- | --- |
 | Schema version | Version of the telemetry event format. |
 | Installation ID | Random identifier created for the local Niro installation. |
-| Pentest ID | Identifier for the completed or failed run. |
+| Attack-tool sandbox correlation | Pseudonymous value derived from the Niro config directory for internal lifecycle correlation. |
 | Outcome | `completed` or `failed`. |
 | Timestamps | UTC start and completion times. |
 | Niro version | Version of the Niro CLI. |
@@ -25,7 +25,6 @@ Every pentest that reaches a terminal state emits one event with these fields:
 | Agent | `claude`, `codex`, or `copilot`. |
 | Mode | `pr`, `range`, or `directed`. |
 | Duration | Run time in seconds. |
-| Model cost | Total reported model cost for the run in USD. |
 | Severity floor | Configured minimum finding severity. |
 | Coverage-gap count | Number of known surfaces Niro could not test. |
 | Finding counts | Open, fixed, and blocked counts for each severity. |

@@ -7,22 +7,26 @@ you need the evidence behind a finding or are deciding whether to merge a fix.
 
 | Where Niro ran | Where to look |
 | --- | --- |
-| Local terminal | `niro-summary.md` in the repository root |
+| Local terminal | The `summary` entry in `<config-dir>/artifacts/manifest.json` |
 | GitHub Actions | The workflow run's job summary |
-| GitLab CI/CD | The `niro-summary.md` job artifact |
+| GitLab CI/CD | The `<config-dir>/artifacts/summary.md` job artifact |
 | Pull-request or merge-request review | The change-request comment and status, plus the CI summary or artifact |
 
-The final terminal message also names the result locations produced by that
-run. A run that ended before the handoff may have no findings summary.
+After configuration initialization, `manifest.json` is the canonical index of
+the latest run's terminal outputs. It records the run outcome and an absolute
+path for every artifact actually produced. A run that ended before the handoff
+may have no findings summary.
 
 When the run generated a report, the terminal also prints
 `niro: report: <path>`. That PDF is a customer-facing snapshot of the final
 agreed finding set; it supplements the shorter summary. A finding remains in
 the PDF when the developer agent agrees it should be reported, even if a `fix`
-run created or verified remediation for it. Niro writes the PDF to a temporary
-directory outside the Git checkout. The supplied GitHub Actions workflows upload
-the PDF directly as a single-file artifact named after the report, so it needs
-no archive extraction after download.
+run created or verified remediation for it. Niro writes the PDF into the
+gitignored `<config-dir>/artifacts/` directory. The supplied GitHub and GitLab
+workflows upload it and `knowledge.tar` by stable filename as the
+`niro-artifacts` artifact. On GitHub the findings summary is rendered in the job
+summary; on GitLab it ships as `summary.md` inside that same `niro-artifacts`
+archive.
 
 The summary is deliberately short. It tells you:
 
@@ -37,14 +41,15 @@ is whether the described attacker capability matters in your deployment.
 
 ## Inspect a proven finding
 
-Local runs write `niro-knowledge.tar` when there is reusable configuration or
-finding evidence to preserve. The GitHub and GitLab examples publish the same
-file as a CI artifact. It contains the latest full committable Niro
-configuration snapshot, even when those files did not change during the run.
-List its contents before extracting it:
+The `knowledge` manifest entry identifies the generated knowledge bundle when
+there is reusable configuration or finding evidence to preserve. Current
+GitHub and GitLab examples upload `<config-dir>/artifacts/knowledge.tar` in the
+`niro-artifacts` artifact. It contains the latest
+full committable Niro configuration snapshot, even when those files did not
+change during the run. List its contents before extracting it:
 
 ```bash
-tar -tf niro-knowledge.tar
+tar -tf niro/artifacts/knowledge.tar
 ```
 
 Compare the snapshot with another checkout using Git without changing either

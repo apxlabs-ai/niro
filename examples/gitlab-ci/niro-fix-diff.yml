@@ -46,41 +46,21 @@ niro-fix-diff:
     - curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
   script:
     - |
-      report_log="$(mktemp)"
-      report_stage="$NIRO_CONFIG_DIR/harness/run/reports/$CI_JOB_ID"
-      trap 'rm -f "$report_log"' EXIT
-      set +e
       niro fix \
         --autonomous \
         --base-sha="$CI_COMMIT_BEFORE_SHA" \
         --head-sha="$CI_COMMIT_SHA" \
         --agent=claude \
         --config-dir="$NIRO_CONFIG_DIR" \
-        --generate-report \
         --include-findings="$NIRO_CI_ARTIFACT_INCLUDE_FINDINGS" \
-        --upload-debug-logs="$NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS" | tee "$report_log"
-      niro_status="${PIPESTATUS[0]}"
-      set -e
-      report_path="$(sed -n 's/^niro: report: //p' "$report_log" | tail -n 1)"
-      stage_status=0
-      if [ -n "$report_path" ]; then
-        mkdir -p "$report_stage" || stage_status=$?
-        if [ "$stage_status" -eq 0 ]; then
-          cp -- "$report_path" "$report_stage/" || stage_status=$?
-        fi
-      else
-        echo "niro: requested report path missing" >&2
-        stage_status=1
-      fi
-      if [ "$niro_status" -ne 0 ]; then
-        exit "$niro_status"
-      fi
-      exit "$stage_status"
+        --upload-debug-logs="$NIRO_CI_ARTIFACT_UPLOAD_DEBUG_LOGS"
   artifacts:
+    name: niro-artifacts
     when: always
     paths:
-      - niro-summary.md
-      - niro-knowledge.tar
-      - $NIRO_CONFIG_DIR/harness/run/reports/$CI_JOB_ID/penetration-test-report-*.pdf
+      # Report, findings summary, and knowledge bundle, by stable filename.
+      - $NIRO_CONFIG_DIR/artifacts/penetration-test-report.pdf
+      - $NIRO_CONFIG_DIR/artifacts/summary.md
+      - $NIRO_CONFIG_DIR/artifacts/knowledge.tar
       - niro-debug-logs.tar
     expire_in: 30 days

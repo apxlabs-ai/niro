@@ -118,22 +118,24 @@ niro fix --goal "Test authentication and session handling"
 existing `gh`, `glab`, or `az` authentication and never merges generated
 changes.
 
-Local runs keep their results in your environment. Depending on the outcome,
-the workspace can contain `niro-summary.md`, `niro-knowledge.tar`, and optional
-debug bundles. `fix` can also create remote branches and pull requests. See
+Once configuration initialization succeeds, each run writes its terminal
+outputs under `<config-dir>/artifacts/` and writes `manifest.json` there last.
+The manifest records the request, outcome, and absolute path of each summary,
+report, knowledge bundle, or debug bundle that was actually produced. `fix`
+can also create remote branches and pull requests. See
 [Review the results](review-results.md) for the review workflow.
 
 ## Generate a customer PDF
 
-`niro find` generates a customer-facing penetration-test report by default.
-`niro fix` generates one only when explicitly requested:
+`niro find` and `niro fix` both generate a customer-facing penetration-test
+report by default:
 
 ```bash
 niro find --goal "Test authentication and session handling"
-niro fix --goal "Test authentication and session handling" --generate-report
+niro fix --goal "Test authentication and session handling"
 ```
 
-To run `find` without a PDF, pass `--generate-report=false`.
+To run either without a PDF, pass `--generate-report=false`.
 
 Niro reconciles finding verdicts first, generates exactly one PDF from the final
 canonical state, and prints its absolute path as `niro: report: <path>`. A
@@ -145,11 +147,13 @@ only `fix` prepares remediation changes. In `fix`, verified-fix deletions happen
 after the PDF succeeds so the report retains the agreed finding set while Niro's
 final canonical state is still synchronized.
 
-The PDF is written to a Niro-owned temporary directory outside the Git checkout,
-so report generation does not add an untracked repository file. Copy it to
-durable storage when running locally. The supplied CI examples request the PDF
-and publish it as a job artifact. If the report was requested but no valid PDF
-was produced, the command fails.
+The PDF is written into the gitignored `<config-dir>/artifacts/` directory, so
+report generation adds no tracked repository file. It has a fixed filename and
+persists there across runs: the next run that generates a report overwrites it
+in place (Niro keeps no on-disk version history), while a run that generates no
+report leaves it untouched. Copy it elsewhere to keep an older report. The
+supplied CI examples request the PDF and publish it as a job artifact. If the
+report was requested but no valid PDF was produced, the command fails.
 
 To invoke Niro from inside an interactive developer agent session instead of
 using the turnkey commands, follow [Run Niro from an interactive developer
@@ -197,25 +201,23 @@ checkout, secrets, container runtime, and artifact publication directly.
 See [CI environment](ci-environment.md) for agent CLI secrets and provider-specific
 environment variables.
 
-## Control runtime and cost
+## Control runtime
 
-Runtime and model cost depend on application size, setup, scope, model choice,
-and concurrency. Configure limits in `niro/niro.yaml`:
+Runtime depends on application size, setup, scope, model choice, and
+concurrency. Configure limits in `niro/niro.yaml`:
 
 ```yaml
 limits:
-  max_budget_usd: 25
   max_duration_minutes: 120
   max_concurrency: 4
 ```
 
-- `max_budget_usd` limits model spend for the run.
 - `max_duration_minutes` limits total wall-clock time.
 - `max_concurrency` controls how many test cases can execute concurrently.
 
 A tight limit can stop a run before it reaches useful coverage. Prefer a
 focused scope when you need a short run rather than applying an unrealistically
-small whole-application budget.
+short whole-application duration.
 
 ## Stop a run
 

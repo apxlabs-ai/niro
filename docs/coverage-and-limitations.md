@@ -62,7 +62,7 @@ use the finding count alone as the security result.
 | Disabled features or integrations | Niro cannot test behavior that the selected environment does not expose | Enable a safe test path, provide a substitute, or record a reviewed coverage gap |
 | Network scope | The sandbox cannot reach destinations absent from `scope.yaml` | Authorize only customer-owned hosts and required ports; never widen scope merely to clear an error |
 | Run goal or diff | Focused runs prioritize behavior relevant to that input | Use a whole-application run when broader coverage is required |
-| Time, budget, or concurrency limits | A run can stop with untested or blocked test cases | Focus the goal first; raise limits only when the additional coverage is intentional |
+| Time or concurrency limits | A run can stop with untested or blocked test cases | Focus the goal first; raise limits only when the additional coverage is intentional |
 | Model or provider failure | Rate limits, authentication, or model capability can stop exploration | Correct provider access or reduce concurrency, then rerun the same scope |
 | Environment mismatch | A staging result may not represent production configuration or data paths | Test the environment whose behavior matters, using a separately authorized profile |
 
@@ -137,7 +137,7 @@ Use this order:
 3. Seed distinct users, roles, tenants, and owned resources.
 4. Give the run a focused goal when one workflow matters most.
 5. Resolve every reported coverage gap or explicitly accept it.
-6. Increase duration, budget, or concurrency only when the run still needs more
+6. Increase duration or concurrency only when the run still needs more
    room.
 
 For setup details, see [Prepare your app](prepare-your-app.md). For exact flags

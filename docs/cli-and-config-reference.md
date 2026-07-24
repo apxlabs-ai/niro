@@ -43,14 +43,15 @@ a silent record of each session's tool calls and lifecycle — so `niro` must be
 your `PATH` for them to fire.
 
 Initialization never discards your own content. Files it fully owns are reported
-as skipped when already present. The hook configs are the exception, so a re-run
-can add lifecycle hooks a prior init was missing: Niro merges its own entries
-into an existing `.claude/settings.json` or `.codex/hooks.json` (preserving your
-other settings and hooks), and refreshes the Niro-owned `.github/hooks/niro.json`
-for Copilot. Re-running once everything is current reports skipped. `niro find`
-and `niro fix` initialize the
-default project automatically when Niro will start the application. Initialize
-explicitly when
+as skipped when already present. For a valid existing `.mcp.json`, Niro adds only
+the `mcpServers.niro` entry and preserves every other setting and server. It
+fails without rewriting malformed or structurally incompatible JSON. A re-run
+can also add lifecycle hooks a prior init was missing: Niro merges its own
+entries into an existing `.claude/settings.json` or `.codex/hooks.json`
+(preserving your other settings and hooks), and refreshes the Niro-owned
+`.github/hooks/niro.json` for Copilot. Re-running once everything is current
+reports skipped. `niro find` and `niro fix` initialize the default project
+automatically when Niro will start the application. Initialize explicitly when
 you need an alternate profile or will test an existing runtime with `--url`.
 
 ## Find and fix
@@ -91,10 +92,11 @@ source head safely.
 | --- | --- | --- |
 | `--agent=claude|codex|copilot` | `claude` | Select the installed agent CLI for this command |
 | `--autonomous` | `false` | Grant full current-user host access without agent CLI approval prompts; required in CI and other non-interactive environments |
+| `--resume=<session-id>` | None | Continue a prior run's niro session instead of starting cold. Use the id printed after an autonomous run (`--resume <id> added`), resume with the same `--agent`, and re-run the original command so its scope (`--pr-number`, a SHA range, or `--goal`) is preserved |
 | `--config-dir=<dir>` | `niro` | Select the repository-relative environment profile |
 | `--url=<absolute-url>` | None | Use this existing HTTP or HTTPS runtime; without it Niro starts the current checkout |
 | `--include-findings[=true|false]` | `true` | Include finding proof bundles in the published knowledge artifact |
-| `--generate-report[=true|false]` | `find`: `true`; `fix`: `false` | Generate one customer PDF from the final canonical pentest state |
+| `--generate-report[=true|false]` | `true` | Generate one customer PDF from the final canonical pentest state |
 | `--upload-debug-logs[=true|false]` | `false` | Create a sensitive debug-log bundle for intentional diagnostics |
 
 An existing-runtime URL must be absolute, use HTTP or HTTPS, and match a host
@@ -111,9 +113,9 @@ environment, egress, and repository-instruction boundaries.
 `niro find` never creates fix branches, commits, or pull requests. `niro fix`
 can create those changes but never merges them.
 
-`niro find` generates the PDF by default; pass `--generate-report=false` to opt
-out. `niro fix` generates it only when `--generate-report` is present. The PDF
-is written to a Niro-owned temporary directory outside the repository, and its
+`niro find` and `niro fix` generate the PDF by default; pass
+`--generate-report=false` to opt out. The PDF
+is written into the Niro-owned, gitignored `<config-dir>/artifacts/` directory, and its
 absolute path is printed as `niro: report: <path>`. Niro generates it only after
 the developer agent has reconciled the final agreed finding set: findings
 covered by accepted behavior are deleted and disputes are finished. Creating or
@@ -197,10 +199,11 @@ each environment and select it with `--config-dir`.
 | `accepted-coverage-gaps.yaml` | Reviewed environment limitations | Yes |
 | `findings/` | Local exploit proofs | No |
 | `harness/run/` | Mutable application runtime state | No |
+| `artifacts/` | Latest terminal run manifest, summary, report, and generated bundles | No |
 
 Configuration directories must remain inside the repository and may contain
 letters, digits, `.`, `_`, `-`, and `/`. Niro adds credentials, fixtures,
-findings, and harness runtime state to `.gitignore`.
+findings, harness runtime state, and terminal artifacts to `.gitignore`.
 
 ## `niro.yaml`
 
@@ -215,13 +218,12 @@ change the run.
 | `container.max_memory` | `512m` | Runtime memory string such as `512m` or `2g` | Caps attack-tool container memory |
 | `container.max_cpu` | `2` | `0.1` through `32` | Caps attack-tool container CPU |
 | `container.idle_timeout_minutes` | `240` | Integer greater than `0` | Stops an abandoned idle attack-tool container |
-| `limits.max_budget_usd` | `10` | Number at least `10` | Stops a run at the reported model-cost limit when the provider reports cost |
-| `limits.max_duration_minutes` | `15` | Integer at least `15` | Caps total run wall-clock time |
+| `limits.max_duration_minutes` | `180` | Integer at least `15` | Caps total run wall-clock time |
 | `limits.max_concurrency` | `6` | Integer from `1` through `16` | Caps concurrent test cases |
-| `limits.max_test_case_duration_minutes` | `5` | Integer at least `1` and no greater than total duration | Blocks an individual test case that exceeds its limit while allowing others to continue |
+| `limits.max_test_case_duration_minutes` | `15` | Integer at least `1` and no greater than total duration | Blocks an individual test case that exceeds its limit while allowing others to continue |
 | `models.high` | Agent CLI default | Non-empty model identifier | Pins the attacker agent's strongest reasoning tier |
 | `models.medium` | Agent CLI default | Non-empty model identifier | Pins the attacker agent's balanced reasoning tier |
-| `models.low` | Agent CLI default | Non-empty model identifier | Pins the attacker agent's lowest-cost reasoning tier |
+| `models.low` | Agent CLI default | Non-empty model identifier | Pins the attacker agent's lightweight reasoning tier |
 | `git_provider.kind` | `auto` | `auto`, `github`, `gitlab`, `azure-devops` | Selects or overrides Git-provider detection |
 | `git_provider.publish` | `true` | Boolean | Enables comments and statuses; `false` retains authenticated reads but writes nothing back |
 | `min_severity` | `medium` | `critical`, `high`, `medium`, `low` | Skips testing and reporting below the selected floor |

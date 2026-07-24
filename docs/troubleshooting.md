@@ -239,7 +239,7 @@ Generate raw values into the gitignored `credentials.yaml`. Put non-secret
 resource IDs and other reference points in `fixtures.yaml`. Do not add a
 production administrator credential merely to unblock a staging test.
 
-## The run stops on time, budget, or provider limits
+## The run stops on time or provider limits
 
 First narrow the work with `--goal`, a commit range, or a pull-request scope.
 Then adjust the relevant limit in `niro.yaml` if broader coverage is still
@@ -277,8 +277,9 @@ stale one.
 
 ## A fix run does not open a pull request
 
-A completed run can legitimately produce no fix change. Check
-`niro-summary.md` before treating this as a Git failure.
+A completed run can legitimately produce no fix change. Check the `summary`
+entry in `<config-dir>/artifacts/manifest.json` before treating this as a Git
+failure.
 
 Possible outcomes include:
 
@@ -301,7 +302,8 @@ Check the workflow in this order:
 1. Read the Niro command's exit text and the CI job log.
 2. Confirm the artifact upload step uses `if: always()` or the provider
    equivalent.
-3. Look for `niro-summary.md` and `niro-knowledge.tar`.
+3. Inspect `<config-dir>/artifacts/manifest.json` and the canonical artifact
+   paths it records.
 4. Confirm the selected agent CLI secret was available to the job.
 5. Confirm the runner offers a working container runtime.
 6. Confirm the workflow supplied an explicit goal or revision scope.
@@ -338,10 +340,10 @@ unified "what did Niro do?" view, merge the activity files at read time:
 cat ~/Library/Caches/niro/logs/niro-activity.*.jsonl | jq -s 'sort_by(.time)[]'
 ```
 
-Filter one run by its `pentest_id` when `jq` is available:
+Filter sandbox records by their internal `attack_tool_sandbox` value when `jq` is available:
 
 ```bash
-jq -c 'select(.pentest_id == "<pentest-id>")' \
+jq -c 'select(.attack_tool_sandbox == "<sandbox-name>")' \
   ~/Library/Caches/niro/logs/niro-security.*.jsonl
 ```
 
@@ -367,8 +369,8 @@ niro find --goal "Test login" --upload-debug-logs
 This can create `niro-debug-logs.tar`. Debug logs can contain command output,
 application responses, paths, and other sensitive operational data. Inspect
 and redact the archive before sharing it. Finding proofs in
-`niro-knowledge.tar` are also sensitive and should not be attached to a public
-issue.
+`<config-dir>/artifacts/knowledge.tar` are also sensitive and should not be
+attached to a public issue.
 
 ## Ask for help
 

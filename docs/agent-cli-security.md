@@ -86,14 +86,19 @@ The agent CLI inherits nearly all of Niro's environment, including application,
 model-provider, and Git credentials placed in the process or CI job. Niro makes
 only these narrow transformations:
 
-- it removes `CODEX_AUTH_JSON_B64` after restoring the Codex login file;
-- the autonomous Copilot SDK subprocess converts `COPILOT_PROVIDER_*` and
-  `COPILOT_MODEL` to SDK configuration and removes those variables; and
+- it removes `CODEX_AUTH_JSON_B64` after restoring the Codex login file; and
 - it adds or replaces its own orchestration variables.
 
-This is not a secret allowlist. Other variables remain available to the agent
-CLI and child processes, and values printed or read into context can reach the
-model provider or another network destination.
+Every other variable is passed through unchanged and is available to the agent
+CLI and its child processes—including all model-provider and BYOK keys, Git
+tokens, and application secrets. This is not a secret allowlist, and Niro does
+not isolate credentials from the agent. Assume that any credential present in
+the run's environment can be read by the agent, printed into model context, or
+exfiltrated by untrusted repository content or prompt injection, and can reach
+the model provider or another network destination. Give a run only the
+credentials it needs: prefer least-privilege, short-lived, dedicated
+credentials—especially in CI, where the environment usually holds higher-value
+shared secrets—and rotate anything you would not want disclosed.
 
 ### Host network egress
 

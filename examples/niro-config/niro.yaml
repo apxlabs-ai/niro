@@ -22,23 +22,21 @@ version: 1
 #                                # is the explicit shutdown (immediate,
 #                                # host-side docker stop); this knob only
 #                                # governs the never-coming-back case.
+#                                # Applied at container launch: a change
+#                                # takes effect on the NEXT pentest —
+#                                # close_pentest, then start again.
 
 # limits:
-#   max_budget_usd: 10           # default; floor 10; no ceiling. Caps LLM
-#                                # spend per run. Below 10, runs reliably abort
-#                                # before producing useful findings — so the
-#                                # floor equals the default. Crank up freely
-#                                # for staging-wide assessments.
-#   max_duration_minutes: 15     # default; floor 15; no ceiling. Wall-clock
-#                                # cap from run start. Same floor=default
-#                                # principle as max_budget_usd.
+#   max_duration_minutes: 180    # default; floor 15; no ceiling. Wall-clock
+#                                # cap from run start. Sized so a whole-app
+#                                # sweep finishes; lower it for tight CI runs.
 #   max_concurrency: 6           # default; range 1..16. How many test cases
 #                                # run in parallel. Your LLM provider's rate
 #                                # limits bind first — drop this to 1 for
-#                                # tight budgets or to work around throttling.
-#   max_test_case_duration_minutes: 5  # default; floor 1; must be <=
+#                                # debugging or to work around throttling.
+#   max_test_case_duration_minutes: 15 # default; floor 1; must be <=
 #                                # max_duration_minutes. Per-test-case time
-#                                # budget. When a single test case exceeds
+#                                # limit. When a single test case exceeds
 #                                # this, Niro auto-marks it BLOCKED with an
 #                                # actionable reason and lets siblings keep
 #                                # running. Raise it for projects where
@@ -48,10 +46,10 @@ version: 1
 # models:
 #   high:    <model-name>        # most capable model. Used when Niro needs
 #                                # strong reasoning (novel test cases, hard
-#                                # exploits). Costs more per call.
+#                                # exploits).
 #   medium:  <model-name>        # balanced default for most work.
-#   low:     <model-name>        # cheapest model. Used for routine checks
-#                                # where speed and cost matter more than depth.
+#   low:     <model-name>        # lightweight model. Used for routine checks
+#                                # where speed matters more than depth.
 #
 # All three slots optional and independent — pin only what you care about. Omit
 # a slot to keep Niro's built-in default for the selected agent CLI; this is the
@@ -110,12 +108,17 @@ version: 1
 
 # min_severity: medium           # default; one of: critical, high, medium, low.
 #                                # findings below this floor are not reported and
-#                                # not tested (saves cost — fewer test cases run).
+#                                # not tested (fewer test cases run).
+#                                # Person-owned policy: Niro's automation must not
+#                                # change this — edit it only at a person's request.
 
 # log_level: info                # default; one of: debug, info, warn, error.
+#                                # Applied at container launch: a change takes
+#                                # effect on the NEXT pentest (close_pentest,
+#                                # then start again).
 
 # telemetry: true                 # default. Anonymous usage telemetry (counts,
-#                                # durations, cost — no URLs, targets, or code).
+#                                # durations — no URLs, targets, or code).
 #                                # Set false to disable for this project. See
 #                                # the Telemetry section of the README.
 

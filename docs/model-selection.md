@@ -8,7 +8,7 @@ Niro works as two agents, and each runs on its own model:
   across three capability tiers, set in `niro.yaml`.
 
 You don't have to set either — the defaults are sensible. Tune the developer
-agent to change fix quality and cost, or the attacker agent to change how hard
+agent to change fix quality, or the attacker agent to change how hard
 Niro probes.
 
 ## The developer agent's model
@@ -30,9 +30,9 @@ independent, so set only what you care about:
 
 ```yaml
 models:
-  high:   <model-name>   # most capable — novel test cases, hard exploits. Costs more.
+  high:   <model-name>   # most capable — novel test cases, hard exploits.
   medium: <model-name>   # balanced default for most work.
-  low:    <model-name>   # cheapest — routine checks where speed and cost beat depth.
+  low:    <model-name>   # lightweight — routine checks where speed matters.
 ```
 
 Left unpinned, Niro picks a capable model per tier on its own — it does **not**

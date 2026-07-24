@@ -48,7 +48,8 @@ and report generation can still write files; see the
 niro find
 ```
 
-Writes a proven findings summary to `niro-summary.md`.
+Writes a proven findings summary under `<config-dir>/artifacts/` and records its
+absolute path in `manifest.json`.
 
 ## Target one area
 

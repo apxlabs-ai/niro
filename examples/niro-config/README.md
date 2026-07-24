@@ -61,7 +61,9 @@ That container runtime is separate from where the application itself runs.
 | `fixtures.yaml` | Generated references to prepared test state | No |
 | `accepted-behaviors.yaml` | Specific reviewed product behavior Niro should treat as intentional | Yes |
 | `accepted-coverage-gaps.yaml` | Specific environment limitations Niro should not repeatedly report | Yes |
+| `findings/` | Mutable local finding evidence used during verification and remediation | No |
 | `harness/run/` | Mutable runtime state and output owned by the harness | No |
+| `artifacts/` | Latest terminal run manifest, summary, report, and generated bundles | No |
 
 The `.example` files are format references. Copy an accepted-behavior or
 coverage-gap example only when that specific advanced context applies. Do not

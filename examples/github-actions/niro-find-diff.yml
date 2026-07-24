@@ -22,6 +22,10 @@ jobs:
     if: github.event.before != '0000000000000000000000000000000000000000'
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    # Niro's config dir. Change it in this one place (e.g. niro-staging) and
+    # both the run and the artifact upload below follow.
+    env:
+      NIRO_CONFIG_DIR: niro
 
     steps:
       - name: Check out repository
@@ -39,7 +43,6 @@ jobs:
       # This workflow uses Claude Code. To use Codex or Copilot CLI instead:
       # https://github.com/apxlabs-ai/niro/blob/main/docs/supported-agents.md#authenticate-in-ci
       - name: Run Niro
-        id: niro
         shell: bash
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -47,37 +50,25 @@ jobs:
         # github.event.before is the prior branch head (all-zeros on a brand-new
         # branch — guard or pin a base there).
         run: |
-          report_log="$(mktemp)"
-          set +e
           niro find \
             --autonomous \
             --base-sha="${{ github.event.before }}" \
             --head-sha="${{ github.sha }}" \
             --agent=claude \
-            --config-dir=niro \
+            --config-dir="$NIRO_CONFIG_DIR" \
             --include-findings=true \
-            --upload-debug-logs=false 2>&1 | tee "$report_log"
-          niro_status="${PIPESTATUS[0]}"
-          set -e
-          report_path="$(sed -n 's/^niro: report: //p' "$report_log" | tail -n 1)"
-          echo "report_path=$report_path" >> "$GITHUB_OUTPUT"
-          exit "$niro_status"
+            --upload-debug-logs=false
 
-      - name: Upload Niro knowledge
+      # The report and knowledge bundle, by stable filename. The findings
+      # summary already renders in the GitHub job summary, so it needs no upload.
+      - name: Upload Niro artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: niro-knowledge
-          path: niro-knowledge.tar
-          if-no-files-found: ignore
-          retention-days: 30
-
-      - name: Upload Niro penetration-test report
-        if: always() && steps.niro.outputs.report_path != ''
-        uses: actions/upload-artifact@v7
-        with:
-          path: ${{ steps.niro.outputs.report_path }}
-          archive: false
+          name: niro-artifacts
+          path: |
+            ${{ env.NIRO_CONFIG_DIR }}/artifacts/penetration-test-report.pdf
+            ${{ env.NIRO_CONFIG_DIR }}/artifacts/knowledge.tar
           if-no-files-found: ignore
           retention-days: 30
 
