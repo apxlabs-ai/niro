@@ -138,7 +138,8 @@ niro fix --goal "Test authentication and session handling"
 To run either without a PDF, pass `--generate-report=false`.
 
 Niro reconciles finding verdicts first, generates exactly one PDF from the final
-canonical state, and prints its absolute path as `niro: report: <path>`. A
+canonical state. A local run prints its absolute path as `niro: report: <path>`;
+in CI the report is delivered as an uploaded artifact instead. A
 report finding is exactly a finding the developer agent agrees should be
 reported. Findings covered by accepted behavior are deleted and disputes are
 finished before generation. Creating or verifying a fix does not remove an

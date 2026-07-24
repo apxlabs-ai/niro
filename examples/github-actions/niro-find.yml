@@ -46,16 +46,25 @@ jobs:
             --include-findings=true \
             --upload-debug-logs=false
 
-      # The report and knowledge bundle, by stable filename. The findings
-      # summary already renders in the GitHub job summary, so it needs no upload.
-      - name: Upload Niro artifacts
+      # Upload the report as its own artifact, separate from knowledge.tar, and
+      # with archive: false so the download is the PDF itself rather than a zip —
+      # you can open it directly, no extraction step. The findings summary already
+      # renders in the GitHub job summary, so it needs no upload.
+      - name: Upload Niro penetration-test report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: niro-artifacts
-          path: |
-            ${{ env.NIRO_CONFIG_DIR }}/artifacts/penetration-test-report.pdf
-            ${{ env.NIRO_CONFIG_DIR }}/artifacts/knowledge.tar
+          path: ${{ env.NIRO_CONFIG_DIR }}/artifacts/penetration-test-report.pdf
+          archive: false
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload Niro knowledge
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: niro-knowledge
+          path: ${{ env.NIRO_CONFIG_DIR }}/artifacts/knowledge.tar
           if-no-files-found: ignore
           retention-days: 30
 

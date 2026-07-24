@@ -115,8 +115,9 @@ can create those changes but never merges them.
 
 `niro find` and `niro fix` generate the PDF by default; pass
 `--generate-report=false` to opt out. The PDF
-is written into the Niro-owned, gitignored `<config-dir>/artifacts/` directory, and its
-absolute path is printed as `niro: report: <path>`. Niro generates it only after
+is written into the Niro-owned, gitignored `<config-dir>/artifacts/` directory. A
+local run prints its absolute path as `niro: report: <path>`; in CI the report is
+delivered as an uploaded artifact instead. Niro generates it only after
 the developer agent has reconciled the final agreed finding set: findings
 covered by accepted behavior are deleted and disputes are finished. Creating or
 verifying a fix does not remove an agreed finding from the report. In `fix`,

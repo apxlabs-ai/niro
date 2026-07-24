@@ -17,16 +17,18 @@ the latest run's terminal outputs. It records the run outcome and an absolute
 path for every artifact actually produced. A run that ended before the handoff
 may have no findings summary.
 
-When the run generated a report, the terminal also prints
-`niro: report: <path>`. That PDF is a customer-facing snapshot of the final
+When the run generated a report, a local run also prints its path as
+`niro: report: <path>`; in CI the report is delivered as an uploaded artifact
+instead. That PDF is a customer-facing snapshot of the final
 agreed finding set; it supplements the shorter summary. A finding remains in
 the PDF when the developer agent agrees it should be reported, even if a `fix`
 run created or verified remediation for it. Niro writes the PDF into the
-gitignored `<config-dir>/artifacts/` directory. The supplied GitHub and GitLab
-workflows upload it and `knowledge.tar` by stable filename as the
-`niro-artifacts` artifact. On GitHub the findings summary is rendered in the job
-summary; on GitLab it ships as `summary.md` inside that same `niro-artifacts`
-archive.
+gitignored `<config-dir>/artifacts/` directory. On GitHub the supplied workflows
+upload the report as its own directly-downloadable artifact (with `archive: false`,
+so the download is the PDF itself rather than a zip to extract) and `knowledge.tar`
+as `niro-knowledge`; the findings summary renders in the job summary. On GitLab
+the report, summary, and knowledge ship together in one browsable `niro-artifacts`
+artifact.
 
 The summary is deliberately short. It tells you:
 
@@ -43,8 +45,8 @@ is whether the described attacker capability matters in your deployment.
 
 The `knowledge` manifest entry identifies the generated knowledge bundle when
 there is reusable configuration or finding evidence to preserve. Current
-GitHub and GitLab examples upload `<config-dir>/artifacts/knowledge.tar` in the
-`niro-artifacts` artifact. It contains the latest
+GitHub uploads `<config-dir>/artifacts/knowledge.tar` as the `niro-knowledge`
+artifact; GitLab includes it in the `niro-artifacts` archive. It contains the latest
 full committable Niro configuration snapshot, even when those files did not
 change during the run. List its contents before extracting it:
 
