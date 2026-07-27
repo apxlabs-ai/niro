@@ -1,8 +1,8 @@
 # Telemetry
 
-Niro emits pseudonymous operational telemetry when a pentest completes or
-fails. Telemetry does not include source code, prompts, credentials, target
-URLs, raw HTTP traffic, finding text, exploit payloads, or logs.
+Niro emits product-usage and aggregate security-value telemetry for pentests. Telemetry does
+not include source code, prompts, credentials, target URLs, raw HTTP traffic,
+finding text, exploit payloads, or logs.
 
 Telemetry is enabled by default and can be disabled per project. The setting is
 read when a run starts, so the same committed policy applies to local and CI
@@ -10,40 +10,98 @@ runs.
 
 ## What is collected
 
-Every pentest that reaches a terminal state emits one event with these fields:
+### Accepted repository use
+
+After a repository-backed `start_pentest` passes preflight and Niro persists
+the running state, Niro resolves the provider's stable repository ID and emits
+`repository_used`:
+
+```json
+{
+  "installation_id": "550e8400-e29b-41d4-a716-446655440000",
+  "repository_scope": "github.com",
+  "repository_id": "1244024769",
+  "repository_name": "apxlabs-ai/niro",
+  "occurred_at": "2026-07-25T18:05:42Z"
+}
+```
 
 | Field | Description |
 | --- | --- |
-| Schema version | Version of the telemetry event format. |
-| Installation ID | Random identifier created for the local Niro installation. |
-| Attack-tool sandbox correlation | Pseudonymous value derived from the Niro config directory for internal lifecycle correlation. |
-| Outcome | `completed` or `failed`. |
-| Timestamps | UTC start and completion times. |
-| Niro version | Version of the Niro CLI. |
-| OS and architecture | Host platform, such as `darwin` and `arm64`. |
-| Container runtime | `docker` or `podman`. |
-| Agent | `claude`, `codex`, or `copilot`. |
-| Mode | `pr`, `range`, or `directed`. |
-| Duration | Run time in seconds. |
-| Severity floor | Configured minimum finding severity. |
-| Coverage-gap count | Number of known surfaces Niro could not test. |
-| Finding counts | Open, fixed, and blocked counts for each severity. |
-| Repository hash | SHA-256 hash of the repository's remote URL when repository hashing is enabled. |
-| PR hash | SHA-256 hash derived from the repository hash and PR number. Present only for PR runs when the repository hash is available. |
+| `installation_id` | Random identifier created for the local Niro installation. |
+| `repository_scope` | Namespace in which the provider's repository ID is unique, such as `github.com`, a self-managed GitLab domain, `dev.azure.com/acme`, or `aws:111111111111:us-east-2`. |
+| `repository_id` | Stable provider-native repository ID, stored as a string. |
+| `repository_name` | Current readable repository name. This can identify a public or private repository and is not pseudonymous. |
+| `occurred_at` | UTC time at which Niro accepted the run. |
 
-The event schema contains no free-text field for URLs, findings, prompts,
-commands, or application data. Repository and PR hashes are stable,
-pseudonymous identifiers; they are not anonymous data.
+The stable repository key is `(repository_scope, repository_id)`;
+`repository_name` is display metadata and can change after a rename or
+transfer.
+
+Niro reads the origin remote and uses the authenticated provider CLI to resolve
+the stable ID: `gh` for GitHub, `glab` for GitLab, `az` for Azure DevOps, and
+`aws` for CodeCommit. The provider receives a repository metadata request. If
+the run has no project root or Niro cannot resolve the identity, this event is
+not sent.
+
+### Terminal pentest
+
+Every accepted pentest that reaches a terminal state emits `pentest_result`:
+
+```json
+{
+  "installation_id": "550e8400-e29b-41d4-a716-446655440000",
+  "repository_scope": "github.com",
+  "repository_id": "1244024769",
+  "run_id": "019c-c7f2-7df8-a427",
+  "completed_at": "2026-07-25T19:05:42Z",
+  "outcome": "completed",
+  "critical": 1,
+  "high": 2,
+  "medium": 3,
+  "low": 0
+}
+```
+
+| Field | Description |
+| --- | --- |
+| `installation_id` | Random identifier created for the local Niro installation. |
+| `repository_scope`, `repository_id` | Stable provider-native repository identity shared with `repository_used`. |
+| `run_id` | Random identifier for this accepted run. |
+| `completed_at` | UTC time at which the run reached terminal state. |
+| `outcome` | `completed` or `failed`. |
+| `critical`, `high`, `medium`, `low` | Unique, evidence-backed vulnerabilities delivered at each severity. |
+
+Severity counts include unique final `FAILED` test cases and findings that were
+previously `FAILED` but retested as `PASSED` in this run. They exclude
+`BLOCKED`, `DRAFT`, ordinary `PASSED`, below-threshold, and development-only
+test cases. Failed runs have zero severity counts.
+
+A retested `PASSED` finding says only that its exploit no longer reproduced in
+the tested code. This telemetry does not show whether Niro created a fix or
+pull request, whether a pull request was merged, or whether a change was
+deployed.
+
+The event has no free-text field for URLs, findings, prompts, commands, or
+application data. Repository identity is resolved once per accepted run and
+shared by both events. If it cannot be resolved, neither event is sent.
+
+### PostHog SDK metadata
+
+Both events use the installation ID as PostHog's `distinct_id`. The PostHog Go
+SDK also adds an event UUID, transport timestamp, SDK name and version,
+`$os`, `$os_version` when available, `$os_distro` on Linux, `$go_version`,
+`$geoip_disable: true`, and `$is_server: true`.
 
 ## Where it goes
 
-The event is sent to Niro's PostHog project at `us.i.posthog.com`. Telemetry is
+Events are sent to Niro's PostHog project at `us.i.posthog.com`. Telemetry is
 sent asynchronously, and a telemetry failure does not fail or delay the
 pentest result.
 
 The installation ID is stored locally in Niro's operating-system configuration
 directory as `telemetry.json` so runs from the same installation can be
-correlated.
+correlated. The file contains only `installation_id`.
 
 ## Disable telemetry
 

@@ -106,6 +106,7 @@ review questions in order:
 | Consequence | The attacker capability matches the finding you intend to fix |
 | Reproduction | The recorded requests and responses prove the vulnerable behavior without exposing secrets |
 | What changed | The patch addresses the root cause rather than one symptom |
+| Behavior change | You agree with what the product now does differently, and for whom |
 | Regression test | The test asserts the security invariant in the project's normal test suite |
 | Validation | The test failed on the vulnerable code and passed after the fix |
 | Full suite | Existing tests passed, or any incomplete or failing validation is stated plainly |
@@ -120,8 +121,15 @@ particular attention to authorization boundaries, compatibility, error paths,
 and whether the regression test includes a valid allowed case alongside the
 blocked attack.
 
-A draft PR means the correct behavior requires a product, policy, or deployment
-decision. Niro recommends a direction but does not make that tradeoff for you.
+Fix PRs arrive as drafts. Niro opens them that way because it cannot prove on its
+own that a fix leaves your product's existing behavior intact — a security fix
+takes capability away from someone, and only you can confirm it took it from the
+right people. Read **Behavior change** first: it names what the product now does
+differently and for whom, and it is the part you agree or disagree with rather
+than verify. Where the correct behavior depends on a product, policy, or
+deployment decision, Niro recommends a direction and states the assumption it
+guarded on, but does not make that tradeoff for you. Marking the PR ready for
+review is yours; nothing merges without you.
 
 ## Understand what was verified
 

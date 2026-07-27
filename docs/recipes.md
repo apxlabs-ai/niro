@@ -7,8 +7,8 @@ Niro is built around two commands:
 
 - **`niro find`** pentests and reports. It does not create fix branches,
   commits, or pull requests, but it is not an OS-level read-only mode.
-- **`niro fix`** pentests and opens review-ready PRs with the patch and
-  validation evidence.
+- **`niro fix`** pentests and opens review-ready PRs — as drafts, for you to
+  promote — with the patch and validation evidence.
 
 Claude Code is the default agent CLI. Add `--agent=copilot` or `--agent=codex`
 to switch.

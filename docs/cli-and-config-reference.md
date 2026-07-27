@@ -229,7 +229,7 @@ change the run.
 | `git_provider.publish` | `true` | Boolean | Enables comments and statuses; `false` retains authenticated reads but writes nothing back |
 | `min_severity` | `medium` | `critical`, `high`, `medium`, `low` | Skips testing and reporting below the selected floor |
 | `log_level` | `info` | `debug`, `info`, `warn`, `error` | Controls operational log verbosity; security-boundary logging remains enabled |
-| `telemetry` | `true` | Boolean | Enables or disables the pseudonymous run event for this project |
+| `telemetry` | `true` | Boolean | Enables or disables repository-usage and terminal run telemetry for this project |
 | `headless` | `false` | Boolean | Allows automation to continue while surfacing concerns that would require acknowledgement in an interactive run |
 | `security.env.access` | Empty | Unique POSIX names matching `[A-Z_][A-Z0-9_]*` | Authorizes additional host environment variables beyond known agent CLI settings |
 

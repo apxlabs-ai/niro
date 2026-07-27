@@ -173,7 +173,7 @@
 
   <text class="card-title" x="1125" y="1175">PostHog</text>
   <use href="#icon-posthog" x="1125" y="1188" width="32" height="32"/>
-  <text class="card-copy" x="1125" y="1238">Optional pseudonymous run event only</text>
+  <text class="card-copy" x="1125" y="1238">Repository names, usage, and pentest results</text>
 
   <!-- Internal flows -->
   <path class="flow" d="M410 277 H320"/>
@@ -224,7 +224,7 @@
 
   <path class="flow-optional" d="M655 585 V700 H1050 V1188 H1090"/>
   <rect class="flow-label" x="928" y="1083" width="244" height="26" rx="4"/>
-  <text class="label" x="1050" y="1101" text-anchor="middle">Optional pseudonymous run event</text>
+  <text class="label" x="1050" y="1101" text-anchor="middle">Optional repository and run events</text>
 
   <!-- Legend -->
   <path class="flow" d="M80 1188 H135"/>

@@ -24,8 +24,8 @@ your project or CI configuration.
   provider. Niro creates artifact files in your workspace; your CI workflow
   decides whether to publish them and how long to retain them.
 - **APX Labs:** APX Labs does not need access to your repository, credentials,
-  findings, or logs. When telemetry is enabled, Niro sends one pseudonymous run
-  event to APX Labs' PostHog project.
+  findings, or logs. When telemetry is enabled, Niro sends repository-usage and
+  terminal run events to APX Labs' PostHog project.
 
 ## Security FAQ
 
@@ -113,15 +113,23 @@ APX Labs does not need access to your repository, source code, target
 credentials, findings, exploit proofs, traffic, or logs for a run to complete.
 Those remain in your environment and the providers you configure.
 
-When telemetry is enabled, APX Labs receives the pseudonymous operational event
-described below. Niro does not send run content to an APX Labs-hosted model or
-execution service.
+When telemetry is enabled, APX Labs receives the repository-usage and aggregate
+security-value events described below. Niro does not send run content to an
+APX Labs-hosted model or execution service.
 
 ### What telemetry does Niro collect?
 
-Telemetry is enabled by default. Niro sends one event when a pentest completes
-or fails. It contains pseudonymous identifiers, environment metadata, duration,
-severity counts, and coverage-gap counts.
+Telemetry is enabled by default. For a repository-backed run, Niro sends the
+repository's provider-native ID, provider scope, readable name, installation
+ID, and acceptance time after preflight succeeds. Niro also sends an
+event when an accepted pentest completes or fails. It contains installation,
+repository, and run IDs; completion time and outcome; and aggregate counts of
+unique, evidence-backed vulnerabilities by severity. Counts include final
+failed findings and previously failed findings that no longer reproduce;
+blocked findings do not count.
+
+Telemetry does not show whether Niro created a fix or pull request, whether a
+pull request was merged, or whether a change was deployed.
 
 It does not contain source code, prompts, credentials, target URLs, raw HTTP
 traffic, finding text, exploit payloads, or logs. Disable it per project:
