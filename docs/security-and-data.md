@@ -123,8 +123,11 @@ Telemetry is enabled by default. For a repository-backed run, Niro sends the
 repository's provider-native ID, provider scope, readable name, installation
 ID, and acceptance time after preflight succeeds. Niro also sends an
 event when an accepted pentest completes or fails. It contains installation,
-repository, and run IDs; completion time and outcome; and aggregate counts of
-unique, evidence-backed vulnerabilities by severity. Counts include final
+repository, and run IDs; completion time and outcome; aggregate counts of
+unique, evidence-backed vulnerabilities by severity; and whether the target
+was on the same machine and whether source was under test (single true/false
+values — the target URL itself is never sent). A run against a target with no
+source carries no repository fields at all. Counts include final
 failed findings and previously failed findings that no longer reproduce;
 blocked findings do not count.
 

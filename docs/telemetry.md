@@ -59,18 +59,22 @@ Every accepted pentest that reaches a terminal state emits `pentest_result`:
   "critical": 1,
   "high": 2,
   "medium": 3,
-  "low": 0
+  "low": 0,
+  "source_available": true,
+  "local_runtime": true
 }
 ```
 
 | Field | Description |
 | --- | --- |
 | `installation_id` | Random identifier created for the local Niro installation. |
-| `repository_scope`, `repository_id` | Stable provider-native repository identity shared with `repository_used`. |
+| `repository_scope`, `repository_id` | Stable provider-native repository identity shared with `repository_used`. Omitted when the run had no repository. |
 | `run_id` | Random identifier for this accepted run. |
 | `completed_at` | UTC time at which the run reached terminal state. |
 | `outcome` | `completed` or `failed`. |
 | `critical`, `high`, `medium`, `low` | Unique, evidence-backed vulnerabilities delivered at each severity. |
+| `source_available` | Whether source was under test. `false` for an external target with no source. |
+| `local_runtime` | Whether the target was loopback-class (`localhost`, `127.0.0.1`, `::1`, `0.0.0.0`) — an application running on the same machine. A single true/false; the target URL itself is never sent. |
 
 Severity counts include unique final `FAILED` test cases and findings that were
 previously `FAILED` but retested as `PASSED` in this run. They exclude
@@ -83,8 +87,14 @@ pull request, whether a pull request was merged, or whether a change was
 deployed.
 
 The event has no free-text field for URLs, findings, prompts, commands, or
-application data. Repository identity is resolved once per accepted run and
-shared by both events. If it cannot be resolved, neither event is sent.
+application data.
+
+Repository identity is resolved once per accepted run and shared by both
+events. It is not always available: a run against a target with no source — an
+external URL — has no repository, and a lookup can fail on its own. In either
+case `repository_used` is not sent and `pentest_result` omits
+`repository_scope` and `repository_id`; the run is still reported, keyed on
+the installation ID. `source_available` distinguishes the two situations.
 
 ### PostHog SDK metadata
 
