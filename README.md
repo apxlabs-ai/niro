@@ -87,6 +87,37 @@ doesn't stop until each bug is proven:
 Proven bugs are grouped by root cause into focused, review-ready PRs — one per
 cause, each with its own validation evidence.
 
+## Don't take our word for it
+
+Here is a complete Niro run you can inspect yourself — from the pinned source
+and public workflow to the unedited report and every proposed code change.
+Niro tested a public Casdoor demo fork at this
+[exact commit](https://github.com/niro-demos/casdoor/commit/0c7f4748f83ab07fdd74ccd2f79a90b1bf8073d7)
+and recorded 33 confirmed findings (9 critical, 12 high, and 12 medium), 3
+coverage gaps, and 28 draft remediation PRs.
+
+- **[Read the full penetration-test report (PDF, 64
+  pages)](https://github.com/niro-demos/niro-configs/blob/0e2a5d498875e46c719a619e92693e57a72029e7/reports/casdoor.pdf)**
+- **[Inspect the exact GitHub Actions
+  run](https://github.com/niro-demos/casdoor/actions/runs/32054406790)**
+- **[Browse all 28 draft remediation
+  PRs](https://github.com/niro-demos/casdoor/pulls?q=is%3Apr+created%3A2026-08-17T08%3A52%3A00Z..2026-08-17T22%3A15%3A00Z)**
+
+Three representative fixes:
+
+- **Multi-step attack chain:** [Read and hijack another tenant's LDAP
+  configuration](https://github.com/niro-demos/casdoor/pull/247) — chains a
+  forged owner segment into cross-tenant configuration disclosure, then
+  overwrites the same record to redirect the victim's LDAP integration to
+  attacker-controlled infrastructure.
+- [Derive authorization from the resource actually being
+  accessed](https://github.com/niro-demos/casdoor/pull/245) — closes tenant
+  boundary bypasses caused by validating different identifiers from those the
+  controller used.
+- [Stop returning replayable session
+  credentials](https://github.com/niro-demos/casdoor/pull/271) — prevents an
+  organization administrator from replaying another user's live session ID.
+
 ## Built for trust
 
 AI makes code faster to ship and harder to trust. Niro is built to earn that
